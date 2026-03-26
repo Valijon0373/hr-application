@@ -89,7 +89,7 @@ function Footer() {
         </div>
 
         <div className="text-center text-[12px] font-medium tracking-wider text-white/70">
-          U. RSPI | RTTM Jamosi | 2026
+          URSPI | RTTM Jamosi | 2026
         </div>
       </div>
     </footer>

@@ -107,6 +107,7 @@ function Dashboard() {
   const [active, setActive] = useState('dashboard') // dashboard | arizalar
 
   const [applications, setApplications] = useState([])
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const [isNight, setIsNight] = useState(() => {
     try {
@@ -213,6 +214,66 @@ function Dashboard() {
     return { total, qabul, jarayonda, rad }
   }, [applications])
 
+  const pieAndBarData = useMemo(() => {
+    const qabul = statusCounts.qabul
+    const jarayonda = statusCounts.jarayonda
+    const rad = statusCounts.rad
+
+    const pieTotal = qabul + jarayonda + rad
+    const isEmpty = pieTotal === 0
+
+    const qabulPct = isEmpty ? 0 : (qabul / pieTotal) * 100
+    const jarayondaPct = isEmpty ? 0 : (jarayonda / pieTotal) * 100
+    const radPct = isEmpty ? 0 : (rad / pieTotal) * 100
+
+    const toDeg = (pct) => (pct / 100) * 360
+    const degQabul = isEmpty ? 0 : toDeg(qabulPct)
+    const degJarayonda = isEmpty ? 0 : toDeg(jarayondaPct)
+
+    const gradient = isEmpty
+      ? 'conic-gradient(#94a3b8_0_360deg)'.replaceAll('_', ' ')
+      : `conic-gradient(#10c968_0_${degQabul}deg,#f59e0b_${degQabul}deg_${degQabul + degJarayonda}deg,#ef4444_${degQabul + degJarayonda}deg_360deg)`.replaceAll(
+          '_',
+          ' ',
+        )
+
+    // Oyma-oy arizalar soni (so‘nggi 6 oy)
+    const monthKeyUTC = (d) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+    const monthLabelUTC = (d) => `${String(d.getUTCMonth() + 1).padStart(2, '0')}/${String(d.getUTCFullYear()).slice(-2)}`
+    const monthsBack = 6
+    const now = new Date()
+
+    const countsByMonth = applications.reduce((acc, a) => {
+      if (!a?.createdAt) return acc
+      const dt = new Date(a.createdAt)
+      if (Number.isNaN(dt.getTime())) return acc
+
+      const key = monthKeyUTC(dt)
+      acc[key] = (acc[key] ?? 0) + 1
+      return acc
+    }, {})
+
+    const monthlyItems = Array.from({ length: monthsBack }, (_, idx) => {
+      const monthsAgo = monthsBack - 1 - idx
+      const dt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - monthsAgo, 1))
+      const key = monthKeyUTC(dt)
+      return { key, label: monthLabelUTC(dt), value: countsByMonth[key] ?? 0 }
+    })
+
+    const maxBarValue = Math.max(...monthlyItems.map((i) => i.value), 1)
+
+    return {
+      gradient,
+      pieItems: [
+        { key: 'rad', label: 'Rad etilgan', value: rad, pct: Math.round(radPct) },
+        { key: 'qabul', label: 'Qabul qilingan', value: qabul, pct: Math.round(qabulPct) },
+        { key: 'jarayonda', label: 'Jarayonda', value: jarayonda, pct: Math.round(jarayondaPct) },
+      ],
+      monthlyItems,
+      maxBarValue,
+    }
+  }, [statusCounts, applications])
+
   const headerTitle = useMemo(() => {
     return active === 'dashboard' ? 'Admin Dashboard' : 'Arizalar'
   }, [active])
@@ -233,7 +294,10 @@ function Dashboard() {
   return (
     <div className={`min-h-screen ${pageBg}`}>
       <div className="flex min-h-screen">
-        <aside className={`flex w-[260px] flex-col border-r ${panelBorder} ${panelBg}`}>
+        <aside
+          id="admin-sidebar"
+          className={`flex flex-col ${sidebarOpen ? 'w-[260px] border-r' : 'w-0 border-r-0'} ${panelBorder} ${panelBg} overflow-hidden transition-all duration-300`}
+        >
           <div className="px-6 py-6">
             <div className={`text-sm font-semibold ${isNight ? 'text-slate-100' : 'text-slate-900'}`}>UrSPI Admin</div>
             <div className={`text-xs ${isNight ? 'text-slate-400' : 'text-slate-500'}`}>Admin Panel</div>
@@ -297,6 +361,9 @@ function Dashboard() {
                     isNight ? 'text-slate-200' : 'text-slate-700'
                   } shadow-sm`}
                   aria-label="Menu"
+                  aria-expanded={sidebarOpen}
+                  aria-controls="admin-sidebar"
+                  onClick={() => setSidebarOpen((v) => !v)}
                 >
                   <FiMenu className="text-lg" aria-hidden="true" />
                 </button>
@@ -370,12 +437,12 @@ function Dashboard() {
                 <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
                   <div className={`rounded-xl border ${panelBorder} ${panelBg} p-5 shadow-sm`}>
                     <div className={`text-sm font-semibold ${isNight ? 'text-slate-100' : 'text-slate-900'}`}>
-                      Reytinglar Taqsimoti
+                      Arizalar holati taqsimoti
                     </div>
                     <div className="mt-4 flex items-center justify-center">
                       <div className="relative h-44 w-44 rounded-full bg-emerald-400/90">
-                        <div className="absolute inset-0 rounded-full [background:conic-gradient(#10c968_0_360deg)]" />
-                        <div className="absolute inset-0 m-[18px] rounded-full bg-white" />
+                        <div className="absolute inset-0 rounded-full" style={{ background: pieAndBarData.gradient }} />
+                        <div className={`absolute inset-0 m-[18px] rounded-full ${isNight ? 'bg-slate-900' : 'bg-white'}`} />
                       </div>
                     </div>
                     <div
@@ -383,25 +450,46 @@ function Dashboard() {
                         isNight ? 'text-slate-400' : 'text-slate-500'
                       }`}
                     >
-                      <div>5 yulduz: 100%</div>
-                      <div>1 yulduz: 0%</div>
+                      {pieAndBarData.pieItems.map((it) => (
+                        <div key={it.key} className="flex items-center gap-2">
+                          <span
+                            className="inline-block h-2.5 w-2.5 rounded-full"
+                            style={{
+                              background:
+                                it.key === 'qabul' ? '#10c968' : it.key === 'jarayonda' ? '#f59e0b' : '#ef4444',
+                            }}
+                          />
+                          <span>
+                            {it.label}: {it.pct}%
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
                   <div className={`rounded-xl border ${panelBorder} ${panelBg} p-5 shadow-sm`}>
                     <div className={`text-sm font-semibold ${isNight ? 'text-slate-100' : 'text-slate-900'}`}>
-                      Kategoriyalar Bo'yicha O'rtacha Reytinglar
+                      Oyma-oy arizalar soni
                     </div>
-                    <div className="mt-5 grid grid-cols-5 items-end gap-4">
-                      {[92, 92, 92, 92, 92].map((h, idx) => (
-                        <div key={idx} className="flex flex-col items-center gap-2">
-                          <div
-                            className="w-full rounded-lg bg-emerald-400"
-                            style={{ height: `${h}px` }}
-                          />
-                          <div className={`text-[10px] ${isNight ? 'text-slate-400' : 'text-slate-400'}`}>Unum</div>
-                        </div>
-                      ))}
+                    <div className="mt-5 grid grid-cols-6 items-end gap-3">
+                      {pieAndBarData.monthlyItems.map((it) => {
+                        const maxBarHeight = 130
+                        const height =
+                          it.value === 0 ? 0 : Math.max(8, (it.value / pieAndBarData.maxBarValue) * maxBarHeight)
+
+                        return (
+                          <div key={it.key} className="flex flex-col items-center gap-2">
+                            <div
+                              className={`w-full rounded-lg ${it.value ? 'bg-emerald-400' : 'bg-slate-300 dark:bg-slate-700'}`}
+                              style={{ height }}
+                            />
+                            <div className={`text-center text-[10px] ${isNight ? 'text-slate-400' : 'text-slate-600'}`}>{it.label}</div>
+                            <div className={`text-center text-[12px] font-semibold ${isNight ? 'text-emerald-300' : 'text-emerald-700'}`}>
+                              {it.value}
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 </div>

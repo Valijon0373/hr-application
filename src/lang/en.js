@@ -62,6 +62,10 @@ const en = {
   back: 'Back',
   next: 'Next',
   finish: 'Finish',
+
+  successModalTitle: 'Application received',
+  successModalBody: 'We will contact you soon.',
+  modalOk: 'Got it',
 }
 
 export default en

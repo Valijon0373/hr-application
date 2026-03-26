@@ -63,6 +63,10 @@ const ru = {
   back: 'Назад',
   next: 'Далее',
   finish: 'Завершить',
+
+  successModalTitle: 'Заявление принято',
+  successModalBody: 'В ближайшее время мы свяжемся с вами.',
+  modalOk: 'Понятно',
 }
 
 export default ru

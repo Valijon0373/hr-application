@@ -23,7 +23,7 @@ function PublicForm() {
     langCertFile: '',
     cvFile: '',
   })
-  const [submitted, setSubmitted] = useState(false)
+  const [successModalOpen, setSuccessModalOpen] = useState(false)
 
   const c = copy[lang]
 
@@ -254,7 +254,7 @@ function PublicForm() {
     }
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify([application, ...(Array.isArray(existing) ? existing : [])]))
-    setSubmitted(true)
+    setSuccessModalOpen(true)
     setCurrentStep(1)
     setFormData({
       fio: '',
@@ -271,8 +271,6 @@ function PublicForm() {
       langCertFile: '',
       cvFile: '',
     })
-
-    window.setTimeout(() => setSubmitted(false), 2500)
   }
 
   return (
@@ -361,9 +359,34 @@ function PublicForm() {
                   </button>
                 </div>
 
-                {submitted ? (
-                  <div className="mt-3 text-center text-xs font-semibold text-emerald-700">
-                    Ariza qabul qilindi!
+                {successModalOpen ? (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
+                    <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="text-lg font-semibold text-slate-900">{c.successModalTitle}</div>
+                          <div className="mt-2 text-sm font-medium text-slate-600">{c.successModalBody}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSuccessModalOpen(false)}
+                          className="grid h-9 w-9 place-items-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50"
+                          aria-label="Close"
+                        >
+                          ×
+                        </button>
+                      </div>
+
+                      <div className="mt-6 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setSuccessModalOpen(false)}
+                          className="rounded-full bg-gradient-to-r from-[#16cbff] to-[#10c968] px-6 py-2 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(23,196,171,0.35)] transition hover:brightness-105"
+                        >
+                          {c.modalOk ?? 'OK'}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ) : null}
               </div>

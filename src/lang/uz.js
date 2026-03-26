@@ -63,6 +63,10 @@ const uz = {
   back: 'Orqaga',
   next: 'Keyingi',
   finish: 'Yakunlash',
+
+  successModalTitle: 'Ariza qabul qilindi',
+  successModalBody: 'Tez orada siz bilan bo\'g\'lanamiz',
+  modalOk: 'Tushunarli',
 }
 
 export default uz
