@@ -1,0 +1,69 @@
+const uz = {
+  navHome: 'Bosh sahifa',
+  navNext: 'Keytingilar',
+  langUz: 'UZB',
+  langRu: 'RUS',
+  langEn: 'ENG',
+
+  sidebarTitle: 'Ariza topshirish',
+  sidebarSubtitle: 'Ma`lumotlarni bosqichma-bosqich kiriting.',
+  bosqichlarLabel: 'Bosqichlar',
+
+  step1Title: "Shaxsiy ma'lumotlar",
+  step1Subtitle:
+    "Iltimos, ism-sharifingiz va tug'ilgan sanangizni (dd.mm.yyyy) kiriting.",
+  step1Progress: "1-bosqich: shaxsiy ma'lumotlar",
+  fioLabel: 'F.I.O',
+  fioPlaceholder: 'Familiya Ism Otasining ismi',
+  dobLabel: "Tug'ilgan sanasi",
+  dobPlaceholder: 'dd.mm.yyyy',
+
+  step2Title: 'Hudud va aloqa',
+  step2Subtitle: "Viloyat, tuman va aloqa ma'lumotlaringizni kiriting.",
+  step2Progress: '2-bosqich: hudud va aloqa',
+  regionLabel: 'Viloyat',
+  regionSelectPlaceholder: 'Tanlang....',
+  regionPlaceholder: 'Tanlang....',
+  regionOptions: [
+    'Toshkent shahri',
+    'Toshkent viloyati',
+    'Samarqand viloyati',
+    'Farg\'ona viloyati',
+  ],
+  districtLabel: 'Tuman / shahar',
+  districtPlaceholder: 'Masalan: Chilonzor',
+  phoneLabel: 'Telefon raqami',
+  phonePlaceholder: '+998 90 123 45 67',
+  emailLabel: 'E-mail',
+  emailPlaceholder: 'you@example.com',
+
+  step3Title: "Ta'lim ma'lumotlari",
+  step3Subtitle: "Oliy ta'lim muassasasi va tugatgan yilingizni kiriting.",
+  step3Progress: "3-bosqich: ta'lim va bakalavr/magistr diplomlari",
+  higherEdLabel: "Oliy ta'lim muassasasi",
+  higherEdPlaceholder: 'Masalan: Toshkent Davlat Universiteti',
+  gradYearLabel: 'Tugatgan yili',
+  gradYearPlaceholder: 'Masalan: 2017',
+  bachelorLabel: 'Bakalavr diplomi (fayl yuklash)',
+  bachelorTip: 'PDF yoki rasm (JPG/PNG) tavsiya etiladi.',
+  masterLabel: 'Magistr diplomi (ixtiyoriy)',
+  masterTip: "Agar mavjud bo'lsa, yuklang.",
+
+  step4Title: 'Sertifikatlar va fayllar',
+  step4Subtitle:
+    "Til sertifikati, PHD/DSC diplomlari va ob'ektivkani yuklang.",
+  step4Progress: '4-bosqich: sertifikatlar va hujjatlar',
+  phdLabel: 'PHD yoki DSC diplomi (ixtiyoriy)',
+  phdTip: "Agar ilmiy darajangiz bo'lsa, yuklang.",
+  langCertLabel: 'Til sertifikat (fayl)',
+  langCertTip: 'Masalan: IELTS, CEFR, Duolingo va h.k.',
+  cvLabel: "Ob'ektivka / CV (fayl)",
+  cvTip: 'PDF yoki DOC/DOCX formatda.',
+
+  back: 'Orqaga',
+  next: 'Keyingi',
+  finish: 'Yakunlash',
+}
+
+export default uz
+

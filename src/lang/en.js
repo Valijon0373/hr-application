@@ -1,0 +1,68 @@
+const en = {
+  navHome: 'Home',
+  navNext: 'Next',
+  langUz: 'UZB',
+  langRu: 'RUS',
+  langEn: 'ENG',
+
+  sidebarTitle: 'Application submission',
+  sidebarSubtitle: 'Enter your details step by step.',
+  bosqichlarLabel: 'Steps',
+
+  step1Title: 'Personal information',
+  step1Subtitle:
+    'Please enter your full name and date of birth (dd.mm.yyyy).',
+  step1Progress: 'Step 1: personal information',
+  fioLabel: 'Full name',
+  fioPlaceholder: 'Last name First name Father name',
+  dobLabel: 'Date of birth',
+  dobPlaceholder: 'dd.mm.yyyy',
+
+  step2Title: 'Region and contact',
+  step2Subtitle: 'Enter your region and contact details.',
+  step2Progress: 'Step 2: region and contact',
+  regionLabel: 'Region',
+  regionSelectPlaceholder: 'Select....',
+  regionPlaceholder: 'Select....',
+  regionOptions: [
+    'Tashkent city',
+    'Tashkent region',
+    'Samarkand region',
+    'Fergana region',
+  ],
+  districtLabel: 'District / city',
+  districtPlaceholder: 'Example: Chilonzor',
+  phoneLabel: 'Phone number',
+  phonePlaceholder: '+998 90 123 45 67',
+  emailLabel: 'Email',
+  emailPlaceholder: 'you@example.com',
+
+  step3Title: 'Education and diplomas',
+  step3Subtitle: 'Enter your higher education institution and graduation year.',
+  step3Progress: 'Step 3: education and diplomas',
+  higherEdLabel: 'Higher education institution',
+  higherEdPlaceholder: 'Example: Tashkent State University',
+  gradYearLabel: 'Graduation year',
+  gradYearPlaceholder: 'Example: 2017',
+  bachelorLabel: 'Bachelor diploma (file)',
+  bachelorTip: 'PDF or image (JPG/PNG) is recommended.',
+  masterLabel: 'Master diploma (optional)',
+  masterTip: 'If available — upload.',
+
+  step4Title: 'Certificates and files',
+  step4Subtitle: 'Upload your language certificate, PHD/DSC diplomas and CV.',
+  step4Progress: 'Step 4: certificates and documents',
+  phdLabel: 'PHD or DSC diploma (optional)',
+  phdTip: 'If you have an academic degree — upload it.',
+  langCertLabel: 'Language certificate (file)',
+  langCertTip: 'Example: IELTS, CEFR, Duolingo, etc.',
+  cvLabel: 'CV (file)',
+  cvTip: 'In PDF or DOC/DOCX format.',
+
+  back: 'Back',
+  next: 'Next',
+  finish: 'Finish',
+}
+
+export default en
+

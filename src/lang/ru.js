@@ -1,0 +1,69 @@
+const ru = {
+  navHome: 'Главная',
+  navNext: 'Следующие',
+  langUz: 'UZB',
+  langRu: 'RUS',
+  langEn: 'ENG',
+
+  sidebarTitle: 'Подача заявления',
+  sidebarSubtitle: 'Введите данные поэтапно.',
+  bosqichlarLabel: 'Этапы',
+
+  step1Title: 'Персональные данные',
+  step1Subtitle:
+    'Пожалуйста, укажите вашу ФИО и дату рождения (дд.мм.гггг).',
+  step1Progress: 'Шаг 1: персональные данные',
+  fioLabel: 'Ф.И.О.',
+  fioPlaceholder: 'Фамилия Имя Отчество',
+  dobLabel: 'Дата рождения',
+  dobPlaceholder: 'дд.мм.гггг',
+
+  step2Title: 'Регион и контакт',
+  step2Subtitle: 'Укажите данные о регионе и контактах.',
+  step2Progress: 'Шаг 2: регион и контакт',
+  regionLabel: 'Область',
+  regionSelectPlaceholder: 'Выберите....',
+  regionPlaceholder: 'Выберите....',
+  regionOptions: [
+    'Город Ташкент',
+    'Ташкентская область',
+    'Самаркандская область',
+    'Ферганская область',
+  ],
+  districtLabel: 'Район / город',
+  districtPlaceholder: 'Например: Чиланзар',
+  phoneLabel: 'Телефон',
+  phonePlaceholder: '+998 90 123 45 67',
+  emailLabel: 'Эл. почта',
+  emailPlaceholder: 'you@example.com',
+
+  step3Title: 'Образование и дипломы',
+  step3Subtitle: 'Укажите ваше учебное заведение и год окончания.',
+  step3Progress: 'Шаг 3: образование и дипломы',
+  higherEdLabel: 'Учебное заведение',
+  higherEdPlaceholder: 'Например: Ташкентский государственный университет',
+  gradYearLabel: 'Год окончания',
+  gradYearPlaceholder: 'Например: 2017',
+  bachelorLabel: 'Диплом бакалавра (файл)',
+  bachelorTip: 'Рекомендуется PDF или изображение (JPG/PNG).',
+  masterLabel: 'Диплом магистра (необязательно)',
+  masterTip: 'Если есть — загрузите.',
+
+  step4Title: 'Сертификаты и файлы',
+  step4Subtitle:
+    'Загрузите языковой сертификат, PHD/DSC дипломы и CV.',
+  step4Progress: 'Шаг 4: сертификаты и документы',
+  phdLabel: 'Диплом PHD или DSC (необязательно)',
+  phdTip: 'Если у вас есть научная степень — загрузите.',
+  langCertLabel: 'Языковой сертификат (файл)',
+  langCertTip: 'Например: IELTS, CEFR, Duolingo и т.д.',
+  cvLabel: 'Объективка / CV (файл)',
+  cvTip: 'В формате PDF или DOC/DOCX.',
+
+  back: 'Назад',
+  next: 'Далее',
+  finish: 'Завершить',
+}
+
+export default ru
+
