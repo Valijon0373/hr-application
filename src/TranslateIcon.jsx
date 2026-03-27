@@ -10,40 +10,18 @@ const TranslateIcon = ({ size = 24, color = "#fff" }) => {
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      {/* Background square */}
-      <rect x="2" y="4" width="20" height="16" rx="3" fill={color} opacity="0.15" />
-
-      {/* A harfi */}
-      <text
-        x="6"
-        y="14"
-        fontSize="8"
-        fontWeight="bold"
-        fill={color}
-        fontFamily="Arial, sans-serif"
-      >
-        A
-      </text>
-
-      {/* Chinese character (文) */}
-      <text
-        x="11"
-        y="14"
-        fontSize="8"
-        fontWeight="bold"
-        fill={color}
-        fontFamily="Arial, sans-serif"
-      >
-        文
-      </text>
-
-      {/* Arrow */}
+      {/* Globe */}
+      <circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.8" fill="none" />
+      <path d="M3 12h18" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M12 3a13 13 0 0 0 0 18" stroke={color} strokeWidth="1.6" strokeLinecap="round" fill="none" />
+      <path d="M12 3a13 13 0 0 1 0 18" stroke={color} strokeWidth="1.6" strokeLinecap="round" fill="none" />
       <path
-        d="M16 9h4m0 0l-2-2m2 2l-2 2"
+        d="M5 8.5c2 .9 4.4 1.4 7 1.4s5-.5 7-1.4M5 15.5c2-.9 4.4-1.4 7-1.4s5 .5 7 1.4"
         stroke={color}
-        strokeWidth="1.5"
+        strokeWidth="1.4"
         strokeLinecap="round"
         strokeLinejoin="round"
+        fill="none"
       />
     </svg>
   )
