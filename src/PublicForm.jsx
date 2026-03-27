@@ -4,6 +4,37 @@ import Navbar from './components/navbar'
 import Footer from './components/footer'
 import { hasSupabaseEnv, supabase } from './lib/supabaseClient'
 
+// Format phone number as +998 XX XXX XX XX
+const formatPhoneNumber = (input) => {
+  // Remove all non-digit characters
+  const digits = input.replace(/\D/g, '')
+  
+  // If input is empty
+  if (!digits) return ''
+  
+  // If starts with 998, use as is, otherwise prepend 998
+  let phoneDigits = digits
+  if (!phoneDigits.startsWith('998')) {
+    phoneDigits = '998' + phoneDigits
+  }
+  
+  // Keep only first 12 digits (998 + 9 digits)
+  phoneDigits = phoneDigits.slice(0, 12)
+  
+  // Format as +998 XX XXX XX XX
+  if (phoneDigits.length <= 3) {
+    return '+' + phoneDigits
+  } else if (phoneDigits.length <= 5) {
+    return '+' + phoneDigits.slice(0, 3) + ' ' + phoneDigits.slice(3)
+  } else if (phoneDigits.length <= 8) {
+    return '+' + phoneDigits.slice(0, 3) + ' ' + phoneDigits.slice(3, 5) + ' ' + phoneDigits.slice(5)
+  } else if (phoneDigits.length <= 10) {
+    return '+' + phoneDigits.slice(0, 3) + ' ' + phoneDigits.slice(3, 5) + ' ' + phoneDigits.slice(5, 8) + ' ' + phoneDigits.slice(8)
+  } else {
+    return '+' + phoneDigits.slice(0, 3) + ' ' + phoneDigits.slice(3, 5) + ' ' + phoneDigits.slice(5, 8) + ' ' + phoneDigits.slice(8, 10) + ' ' + phoneDigits.slice(10)
+  }
+}
+
 function PublicForm() {
   const [currentStep, setCurrentStep] = useState(1)
   const [lang, setLang] = useState('uz')
@@ -122,7 +153,7 @@ function PublicForm() {
             <input
               type="tel"
               value={formData.phone}
-              onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, phone: formatPhoneNumber(e.target.value) }))}
               placeholder={c.phonePlaceholder}
               className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-800 outline-none transition focus:border-[#22b8ff] focus:ring-2 focus:ring-[#22b8ff]/20"
             />
@@ -376,8 +407,13 @@ function PublicForm() {
         cvFile: null,
       })
       setFileInputKey((v) => v + 1)
-    } catch {
-      setSubmitError("Saqlashda xatolik bo'ldi. Supabase jadval va bucket sozlamasini tekshiring.")
+    } catch (err) {
+      const details = err instanceof Error ? err.message : ''
+      setSubmitError(
+        details
+          ? `Saqlashda xatolik: ${details}`
+          : "Saqlashda xatolik bo'ldi. Supabase jadval va bucket sozlamasini tekshiring.",
+      )
     } finally {
       setSaving(false)
     }
