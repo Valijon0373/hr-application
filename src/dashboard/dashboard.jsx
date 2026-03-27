@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { setAdminAuthed } from '../admin/RequireAdmin'
+import { hasSupabaseEnv, supabase } from '../lib/supabaseClient'
 import {
   FiPlusCircle,
   FiCheckCircle,
@@ -13,9 +14,10 @@ import {
   FiSun,
   FiMoon,
   FiXCircle,
+  FiEye,
+  FiX,
 } from 'react-icons/fi'
 
-const STORAGE_KEY = 'urspi_applications'
 const THEME_KEY = 'urspi_theme'
 
 function StatCard({ title, value, accentClass, isNight }) {
@@ -67,7 +69,7 @@ function StatusSelect({ value, onChange }) {
   const options = [
     { key: 'yangi', label: 'Yangi', icon: <FiPlusCircle aria-hidden="true" /> },
     { key: 'jarayonda', label: 'Jarayonda', icon: <FiClock aria-hidden="true" /> },
-    { key: 'qabul', label: 'Qabul qilingan', icon: <FiCheckCircle aria-hidden="true" /> },
+    { key: 'qabul', label: 'Qabul qilindi', icon: <FiCheckCircle aria-hidden="true" /> },
     { key: 'rad', label: 'Rad etilgan', icon: <FiXCircle aria-hidden="true" /> },
   ]
 
@@ -78,7 +80,7 @@ function StatusSelect({ value, onChange }) {
     jarayonda: 'bg-yellow-50 text-yellow-700 ring-yellow-100',
     rad: 'bg-red-50 text-red-700 ring-red-100',
   }
-  const activeCls = activeMap[value] ?? activeMap.jarayonda
+  const activeCls = activeMap[value] ?? activeMap.yangi
 
   return (
     <div className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold ring-1 ${activeCls}`}>
@@ -98,15 +100,13 @@ function StatusSelect({ value, onChange }) {
   )
 }
 
-function joinFiles(...files) {
-  return files.filter((f) => typeof f === 'string' && f.trim().length > 0).join(', ') || '-'
-}
-
 function Dashboard() {
   const navigate = useNavigate()
   const [active, setActive] = useState('dashboard') // dashboard | arizalar
 
   const [applications, setApplications] = useState([])
+  const [selectedApplication, setSelectedApplication] = useState(null)
+  const [dataError, setDataError] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const [isNight, setIsNight] = useState(() => {
@@ -118,77 +118,34 @@ function Dashboard() {
   })
 
   useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) {
-      const demo = [
-        {
-          id: 101,
-          fio: 'Ali Akbarov',
-          dob: '2001-05-12',
-          region: 'Toshkent',
-          district: 'Yunusobod',
-          phone: '+998 90 123 45 67',
-          email: 'ali.akbarov@mail.uz',
-          higherEd: 'Universitet',
-          gradYear: '2025',
-          bachelorFile: 'bachelor.pdf',
-          masterFile: '',
-          phdFile: '',
-          langCertFile: '',
-          cvFile: 'cv.pdf',
-          statusKey: 'yangi',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: 102,
-          fio: 'Dilnoza Karimova',
-          dob: '2002-02-01',
-          region: "Samarqand",
-          district: 'Bulung’ur',
-          phone: '+998 91 222 33 44',
-          email: 'dilnoza.karimova@mail.uz',
-          higherEd: 'Akademiya',
-          gradYear: '2024',
-          bachelorFile: 'bachelor.pdf',
-          masterFile: '',
-          phdFile: '',
-          langCertFile: '',
-          cvFile: 'cv.pdf',
-          statusKey: 'jarayonda',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: 103,
-          fio: 'Jasur Islomov',
-          dob: '2000-11-20',
-          region: "Buxoro",
-          district: 'G’ijduvon',
-          phone: '+998 93 555 66 77',
-          email: 'jasur.islomov@mail.uz',
-          higherEd: 'Institut',
-          gradYear: '2023',
-          bachelorFile: 'bachelor.pdf',
-          masterFile: '',
-          phdFile: '',
-          langCertFile: '',
-          cvFile: 'cv.pdf',
-          statusKey: 'rad',
-          createdAt: new Date().toISOString(),
-        },
-      ]
+    let activeReq = true
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(demo))
-      // Lint React Hook qoidalariga qarshi chiqyapti; bu yerda state external (localStorage) dan sinxronlanmoqda.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setApplications(demo)
-      return
+    const loadApplications = async () => {
+      if (!hasSupabaseEnv || !supabase) {
+        setDataError('Supabase sozlamalari topilmadi.')
+        setApplications([])
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('applications')
+        .select('*')
+        .order('createdAt', { ascending: false })
+
+      if (!activeReq) return
+      if (error) {
+        setDataError("Ma'lumotlarni yuklashda xatolik bo'ldi.")
+        setApplications([])
+        return
+      }
+
+      setDataError('')
+      setApplications(Array.isArray(data) ? data : [])
     }
 
-    try {
-      const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) setApplications(parsed)
-    } catch {
-      // ignore parsing errors
+    void loadApplications()
+    return () => {
+      activeReq = false
     }
   }, [])
 
@@ -278,9 +235,19 @@ function Dashboard() {
     return active === 'dashboard' ? 'Admin Dashboard' : 'Arizalar'
   }, [active])
 
+  const handleStatusChange = async (id, next) => {
+    if (!supabase) return
+
+    const { error } = await supabase.from('applications').update({ statusKey: next }).eq('id', id)
+    if (error) return
+
+    setApplications((prev) => prev.map((a) => (a.id === id ? { ...a, statusKey: next } : a)))
+    setSelectedApplication((prev) => (prev && prev.id === id ? { ...prev, statusKey: next } : prev))
+  }
+
   const onLogout = () => {
     setAdminAuthed(false)
-    navigate('/admin', { replace: true })
+    navigate('/login', { replace: true })
   }
 
   const pageBg = isNight ? 'bg-slate-950' : 'bg-[#f3f6fb]'
@@ -401,6 +368,11 @@ function Dashboard() {
           </header>
 
           <main className="mx-auto max-w-[1200px] px-6 py-6">
+            {dataError ? (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+                {dataError}
+              </div>
+            ) : null}
             {active === 'dashboard' ? (
               <>
                 <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -503,12 +475,6 @@ function Dashboard() {
                       {applications.length ? 'Arizalar ro‘yxati' : "Hozircha arizalar yo'q"}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700"
-                  >
-                    Yangi ariza
-                  </button>
                 </div>
 
                 <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-4">
@@ -550,14 +516,9 @@ function Dashboard() {
                       }`}
                     >
                       <tr>
-                        <th className="px-4 py-3">ID</th>
                         <th className="px-4 py-3">F.I.O</th>
                         <th className="px-4 py-3">Telefon</th>
-                        <th className="px-4 py-3">Email</th>
-                        <th className="px-4 py-3">Hudud</th>
-                        <th className="px-4 py-3">Diplomlar</th>
-                        <th className="px-4 py-3">Sertifikat</th>
-                        <th className="px-4 py-3">CV</th>
+                        <th className="px-4 py-3 text-center">Ma'lumot</th>
                         <th className="px-4 py-3">Holat</th>
                       </tr>
                     </thead>
@@ -569,29 +530,24 @@ function Dashboard() {
                           key={row.id}
                           className={isNight ? 'hover:bg-slate-800' : 'hover:bg-slate-50'}
                         >
-                          <td className="px-4 py-3">{row.id}</td>
                           <td className="px-4 py-3 font-semibold">{row.fio}</td>
                           <td className="px-4 py-3">{row.phone}</td>
-                          <td className="px-4 py-3">{row.email || '-'}</td>
-                          <td className="px-4 py-3">
-                            {(row.region || '') + (row.district ? ` - ${row.district}` : '') || '-'}
+                          <td className="px-4 py-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedApplication(row)}
+                              className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-xs font-semibold ${
+                                isNight
+                                  ? 'border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800'
+                                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                              }`}
+                            >
+                              <FiEye className="mr-1" aria-hidden="true" />
+                              Ko‘rish
+                            </button>
                           </td>
-                          <td className="px-4 py-3">{joinFiles(row.bachelorFile, row.masterFile, row.phdFile)}</td>
-                          <td className="px-4 py-3">{joinFiles(row.langCertFile)}</td>
-                          <td className="px-4 py-3">{joinFiles(row.cvFile)}</td>
                           <td className="px-4 py-3">
-                            <StatusSelect
-                              value={row.statusKey}
-                              onChange={(next) =>
-                                setApplications((prev) => {
-                                  const updated = prev.map((a) =>
-                                    a.id === row.id ? { ...a, statusKey: next } : a,
-                                  )
-                                  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-                                  return updated
-                                })
-                              }
-                            />
+                            <StatusPill statusKey={row.statusKey} />
                           </td>
                         </tr>
                       ))}
@@ -601,6 +557,247 @@ function Dashboard() {
               </div>
             )}
           </main>
+
+          {selectedApplication && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6"
+              onClick={() => setSelectedApplication(null)}
+            >
+              <div
+                className={`max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border ${panelBorder} ${panelBg} p-6 shadow-2xl`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className={`text-base font-semibold ${isNight ? 'text-slate-100' : 'text-slate-900'}`}>
+                      {selectedApplication.fio}
+                    </div>
+                    <div className={`mt-1 text-xs ${isNight ? 'text-slate-400' : 'text-slate-500'}`}>
+                      ID: {selectedApplication.id ?? '-'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedApplication(null)}
+                    aria-label="Yopish"
+                    className={`grid h-8 w-8 place-items-center rounded-full border ${
+                      isNight
+                        ? 'border-slate-600 text-slate-200 hover:bg-slate-800'
+                        : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <FiX className="text-base" aria-hidden="true" />
+                  </button>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400">F.I.O</div>
+                    <div className={isNight ? 'text-slate-100' : 'text-slate-800'}>
+                      {selectedApplication.fio}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400">Tug‘ilgan sanasi</div>
+                    <div className={isNight ? 'text-slate-100' : 'text-slate-800'}>
+                      {selectedApplication.dob || '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400">Viloyat</div>
+                    <div className={isNight ? 'text-slate-100' : 'text-slate-800'}>
+                      {selectedApplication.region || '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400">Tuman / shahar</div>
+                    <div className={isNight ? 'text-slate-100' : 'text-slate-800'}>
+                      {selectedApplication.district || '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400">Telefon raqami</div>
+                    <div className={isNight ? 'text-slate-100' : 'text-slate-800'}>
+                      {selectedApplication.phone || '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400">E-mail</div>
+                    <div className={isNight ? 'text-slate-100' : 'text-slate-800'}>
+                      {selectedApplication.email || '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400">Oliy ta’lim muassasasi</div>
+                    <div className={isNight ? 'text-slate-100' : 'text-slate-800'}>
+                      {selectedApplication.higherEd || '-'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400">Tugatgan yili</div>
+                    <div className={isNight ? 'text-slate-100' : 'text-slate-800'}>
+                      {selectedApplication.gradYear || '-'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400">Bakalavr diplomi</div>
+                    {selectedApplication.bachelorFile ? (
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        <a
+                          href={selectedApplication.bachelorFile}
+                          download
+                          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                        >
+                          Yuklab olish
+                        </a>
+                        <a
+                          href={selectedApplication.bachelorFile}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                            isNight
+                              ? 'bg-slate-800 text-slate-100 hover:bg-slate-700'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          Ko‘rish
+                        </a>
+                      </div>
+                    ) : (
+                      <div className={isNight ? 'text-slate-500' : 'text-slate-400'}>-</div>
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400">Magistr diplomi (ixtiyoriy)</div>
+                    {selectedApplication.masterFile ? (
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        <a
+                          href={selectedApplication.masterFile}
+                          download
+                          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                        >
+                          Yuklab olish
+                        </a>
+                        <a
+                          href={selectedApplication.masterFile}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                            isNight
+                              ? 'bg-slate-800 text-slate-100 hover:bg-slate-700'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          Ko‘rish
+                        </a>
+                      </div>
+                    ) : (
+                      <div className={isNight ? 'text-slate-500' : 'text-slate-400'}>-</div>
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400">PHD yoki DSC diplomi (ixtiyoriy)</div>
+                    {selectedApplication.phdFile ? (
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        <a
+                          href={selectedApplication.phdFile}
+                          download
+                          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                        >
+                          Yuklab olish
+                        </a>
+                        <a
+                          href={selectedApplication.phdFile}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                            isNight
+                              ? 'bg-slate-800 text-slate-100 hover:bg-slate-700'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          Ko‘rish
+                        </a>
+                      </div>
+                    ) : (
+                      <div className={isNight ? 'text-slate-500' : 'text-slate-400'}>-</div>
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400">Til sertifikat (fayl)</div>
+                    {selectedApplication.langCertFile ? (
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        <a
+                          href={selectedApplication.langCertFile}
+                          download
+                          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                        >
+                          Yuklab olish
+                        </a>
+                        <a
+                          href={selectedApplication.langCertFile}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                            isNight
+                              ? 'bg-slate-800 text-slate-100 hover:bg-slate-700'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          Ko‘rish
+                        </a>
+                      </div>
+                    ) : (
+                      <div className={isNight ? 'text-slate-500' : 'text-slate-400'}>-</div>
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400">Ob'ektivka / CV (fayl)</div>
+                    {selectedApplication.cvFile ? (
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        <a
+                          href={selectedApplication.cvFile}
+                          download
+                          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
+                        >
+                          Yuklab olish
+                        </a>
+                        <a
+                          href={selectedApplication.cvFile}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+                            isNight
+                              ? 'bg-slate-800 text-slate-100 hover:bg-slate-700'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          Ko‘rish
+                        </a>
+                      </div>
+                    ) : (
+                      <div className={isNight ? 'text-slate-500' : 'text-slate-400'}>-</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-6 border-t border-slate-200 pt-4 dark:border-slate-700">
+                  <div className="mb-2 text-xs font-semibold text-slate-400">Statusni o‘zgartirish</div>
+                  <StatusSelect
+                    value={selectedApplication.statusKey || 'yangi'}
+                    onChange={(next) => handleStatusChange(selectedApplication.id, next)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

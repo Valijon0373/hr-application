@@ -1,9 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { copy } from './lang'
 import Navbar from './components/navbar'
 import Footer from './components/footer'
-
-const STORAGE_KEY = 'urspi_applications'
+import { hasSupabaseEnv, supabase } from './lib/supabaseClient'
 
 function PublicForm() {
   const [currentStep, setCurrentStep] = useState(1)
@@ -17,15 +16,25 @@ function PublicForm() {
     email: '',
     higherEd: '',
     gradYear: '',
-    bachelorFile: '',
-    masterFile: '',
-    phdFile: '',
-    langCertFile: '',
-    cvFile: '',
+    bachelorFile: null,
+    masterFile: null,
+    phdFile: null,
+    langCertFile: null,
+    cvFile: null,
   })
   const [successModalOpen, setSuccessModalOpen] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [fileInputKey, setFileInputKey] = useState(0)
 
   const c = copy[lang]
+  const requiredFields = ['fio', 'dob', 'region', 'district', 'phone', 'email', 'higherEd', 'gradYear', 'bachelorFile']
+
+  useEffect(() => {
+    if (!submitError) return
+    const timer = setTimeout(() => setSubmitError(''), 5000)
+    return () => clearTimeout(timer)
+  }, [submitError])
 
   const steps = [
     { id: 1, title: c.step1Title },
@@ -42,20 +51,24 @@ function PublicForm() {
       fields: (
         <>
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-slate-800">{c.fioLabel}</span>
+            <span className="text-sm font-semibold text-slate-800">
+              {c.fioLabel} <span className="text-red-500">*</span>
+            </span>
             <input
               type="text"
               value={formData.fio}
               onChange={(e) => setFormData((prev) => ({ ...prev, fio: e.target.value }))}
-              placeholder={c.fioPlaceholder}
+              placeholder="Familiya Ism Otasining ismi"
               className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-800 outline-none transition focus:border-[#22b8ff] focus:ring-2 focus:ring-[#22b8ff]/20"
             />
           </label>
 
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-slate-800">{c.dobLabel}</span>
+            <span className="text-sm font-semibold text-slate-800">
+              {c.dobLabel} <span className="text-red-500">*</span>
+            </span>
             <input
-              type="text"
+              type="date"
               value={formData.dob}
               onChange={(e) => setFormData((prev) => ({ ...prev, dob: e.target.value }))}
               placeholder={c.dobPlaceholder}
@@ -72,7 +85,9 @@ function PublicForm() {
       fields: (
         <>
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-slate-800">{c.regionLabel}</span>
+            <span className="text-sm font-semibold text-slate-800">
+              {c.regionLabel} <span className="text-red-500">*</span>
+            </span>
             <select
               value={formData.region}
               onChange={(e) => setFormData((prev) => ({ ...prev, region: e.target.value }))}
@@ -88,7 +103,9 @@ function PublicForm() {
           </label>
 
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-slate-800">{c.districtLabel}</span>
+            <span className="text-sm font-semibold text-slate-800">
+              {c.districtLabel} <span className="text-red-500">*</span>
+            </span>
             <input
               type="text"
               value={formData.district}
@@ -99,7 +116,9 @@ function PublicForm() {
           </label>
 
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-slate-800">{c.phoneLabel}</span>
+            <span className="text-sm font-semibold text-slate-800">
+              {c.phoneLabel} <span className="text-red-500">*</span>
+            </span>
             <input
               type="tel"
               value={formData.phone}
@@ -110,7 +129,9 @@ function PublicForm() {
           </label>
 
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-slate-800">{c.emailLabel}</span>
+            <span className="text-sm font-semibold text-slate-800">
+              {c.emailLabel} <span className="text-red-500">*</span>
+            </span>
             <input
               type="email"
               value={formData.email}
@@ -129,7 +150,9 @@ function PublicForm() {
       fields: (
         <>
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-slate-800">{c.higherEdLabel}</span>
+            <span className="text-sm font-semibold text-slate-800">
+              {c.higherEdLabel} <span className="text-red-500">*</span>
+            </span>
             <input
               type="text"
               value={formData.higherEd}
@@ -140,7 +163,9 @@ function PublicForm() {
           </label>
 
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-slate-800">{c.gradYearLabel}</span>
+            <span className="text-sm font-semibold text-slate-800">
+              {c.gradYearLabel} <span className="text-red-500">*</span>
+            </span>
             <input
               type="text"
               value={formData.gradYear}
@@ -151,13 +176,16 @@ function PublicForm() {
           </label>
 
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-slate-800">{c.bachelorLabel}</span>
+            <span className="text-sm font-semibold text-slate-800">
+              {c.bachelorLabel} <span className="text-red-500">*</span>
+            </span>
             <input
+              key={`bachelor-${fileInputKey}`}
               type="file"
               onChange={(e) =>
                 setFormData((prev) => ({
                   ...prev,
-                  bachelorFile: e.target.files?.[0]?.name || '',
+                  bachelorFile: e.target.files?.[0] || null,
                 }))
               }
               className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
@@ -168,11 +196,12 @@ function PublicForm() {
           <label className="space-y-2">
             <span className="text-sm font-semibold text-slate-800">{c.masterLabel}</span>
             <input
+              key={`master-${fileInputKey}`}
               type="file"
               onChange={(e) =>
                 setFormData((prev) => ({
                   ...prev,
-                  masterFile: e.target.files?.[0]?.name || '',
+                  masterFile: e.target.files?.[0] || null,
                 }))
               }
               className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
@@ -191,11 +220,12 @@ function PublicForm() {
           <label className="space-y-2">
             <span className="text-sm font-semibold text-slate-800">{c.phdLabel}</span>
             <input
+              key={`phd-${fileInputKey}`}
               type="file"
               onChange={(e) =>
                 setFormData((prev) => ({
                   ...prev,
-                  phdFile: e.target.files?.[0]?.name || '',
+                  phdFile: e.target.files?.[0] || null,
                 }))
               }
               className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
@@ -206,11 +236,12 @@ function PublicForm() {
           <label className="space-y-2">
             <span className="text-sm font-semibold text-slate-800">{c.langCertLabel}</span>
             <input
+              key={`lang-${fileInputKey}`}
               type="file"
               onChange={(e) =>
                 setFormData((prev) => ({
                   ...prev,
-                  langCertFile: e.target.files?.[0]?.name || '',
+                  langCertFile: e.target.files?.[0] || null,
                 }))
               }
               className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
@@ -221,11 +252,12 @@ function PublicForm() {
           <label className="space-y-2 md:col-span-1">
             <span className="text-sm font-semibold text-slate-800">{c.cvLabel}</span>
             <input
+              key={`cv-${fileInputKey}`}
               type="file"
               onChange={(e) =>
                 setFormData((prev) => ({
                   ...prev,
-                  cvFile: e.target.files?.[0]?.name || '',
+                  cvFile: e.target.files?.[0] || null,
                 }))
               }
               className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-100 file:px-3 file:py-1 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
@@ -239,38 +271,116 @@ function PublicForm() {
 
   const active = stepInfo[currentStep]
 
-  const goNext = () => setCurrentStep((prev) => Math.min(prev + 1, 4))
-  const goPrev = () => setCurrentStep((prev) => Math.max(prev - 1, 1))
-
-  const saveApplication = () => {
-    const existingRaw = localStorage.getItem(STORAGE_KEY)
-    const existing = existingRaw ? JSON.parse(existingRaw) : []
-
-    const application = {
-      id: Date.now(),
-      ...formData,
-      statusKey: 'yangi',
-      createdAt: new Date().toISOString(),
+  const getMissingRequired = (step = null) => {
+    const mapByStep = {
+      1: ['fio', 'dob'],
+      2: ['region', 'district', 'phone', 'email'],
+      3: ['higherEd', 'gradYear', 'bachelorFile'],
+      4: [],
+      all: requiredFields,
     }
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([application, ...(Array.isArray(existing) ? existing : [])]))
-    setSuccessModalOpen(true)
-    setCurrentStep(1)
-    setFormData({
-      fio: '',
-      dob: '',
-      region: '',
-      district: '',
-      phone: '',
-      email: '',
-      higherEd: '',
-      gradYear: '',
-      bachelorFile: '',
-      masterFile: '',
-      phdFile: '',
-      langCertFile: '',
-      cvFile: '',
+    const keys = step ? mapByStep[step] : mapByStep.all
+    return keys.filter((field) => {
+      const value = formData[field]
+      if (field === 'bachelorFile') return !(value instanceof File)
+      return typeof value === 'string' ? value.trim().length === 0 : !value
     })
+  }
+
+  const goNext = () => {
+    const missing = getMissingRequired(currentStep)
+    if (missing.length > 0) {
+      setSubmitError("Majburiy maydonlarni to'ldiring.")
+      return
+    }
+    setSubmitError('')
+    setCurrentStep((prev) => Math.min(prev + 1, 4))
+  }
+
+  const goPrev = () => setCurrentStep((prev) => Math.max(prev - 1, 1))
+
+  const uploadFile = async (file, folder) => {
+    if (!(file instanceof File) || !supabase) return ''
+    const safeName = file.name.replace(/\s+/g, '_')
+    const filePath = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}-${safeName}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('applications')
+      .upload(filePath, file, { upsert: false })
+
+    if (uploadError) throw uploadError
+
+    const { data } = supabase.storage.from('applications').getPublicUrl(filePath)
+    return data?.publicUrl ?? ''
+  }
+
+  const saveApplication = async () => {
+    const missing = getMissingRequired()
+    if (missing.length > 0) {
+      setSubmitError("Majburiy maydonlarni to'ldiring.")
+      return
+    }
+
+    if (!hasSupabaseEnv || !supabase) {
+      setSubmitError('Supabase sozlamalari topilmadi. .env faylni to‘ldiring.')
+      return
+    }
+
+    setSaving(true)
+    setSubmitError('')
+
+    try {
+      const bachelorFile = await uploadFile(formData.bachelorFile, 'bachelor')
+      const masterFile = await uploadFile(formData.masterFile, 'master')
+      const phdFile = await uploadFile(formData.phdFile, 'phd')
+      const langCertFile = await uploadFile(formData.langCertFile, 'language')
+      const cvFile = await uploadFile(formData.cvFile, 'cv')
+
+      const payload = {
+        fio: formData.fio.trim(),
+        dob: formData.dob,
+        region: formData.region.trim(),
+        district: formData.district.trim(),
+        phone: formData.phone.trim(),
+        email: formData.email.trim(),
+        higherEd: formData.higherEd.trim(),
+        gradYear: formData.gradYear.trim(),
+        bachelorFile,
+        masterFile,
+        phdFile,
+        langCertFile,
+        cvFile,
+        statusKey: 'yangi',
+        createdAt: new Date().toISOString(),
+      }
+
+      const { error } = await supabase.from('applications').insert(payload)
+      if (error) throw error
+
+      setSuccessModalOpen(true)
+      setCurrentStep(1)
+      setFormData({
+        fio: '',
+        dob: '',
+        region: '',
+        district: '',
+        phone: '',
+        email: '',
+        higherEd: '',
+        gradYear: '',
+        bachelorFile: null,
+        masterFile: null,
+        phdFile: null,
+        langCertFile: null,
+        cvFile: null,
+      })
+      setFileInputKey((v) => v + 1)
+    } catch {
+      setSubmitError("Saqlashda xatolik bo'ldi. Supabase jadval va bucket sozlamasini tekshiring.")
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -336,6 +446,11 @@ function PublicForm() {
               <form className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2">{active.fields}</form>
 
               <div className="mt-12 border-t border-slate-200 pt-5">
+                {submitError ? (
+                  <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
+                    {submitError}
+                  </div>
+                ) : null}
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <button
                     type="button"
@@ -351,10 +466,11 @@ function PublicForm() {
 
                   <button
                     type="button"
-                    onClick={currentStep === 4 ? saveApplication : goNext}
+                    onClick={currentStep === 4 ? () => void saveApplication() : goNext}
+                    disabled={saving}
                     className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#16cbff] to-[#10c968] px-8 py-3 font-semibold text-white shadow-[0_8px_18px_rgba(23,196,171,0.35)] transition hover:brightness-105"
                   >
-                    {currentStep === 4 ? c.finish : c.next}
+                    {currentStep === 4 ? (saving ? 'Saqlanmoqda...' : c.finish) : c.next}
                     <span aria-hidden="true">→</span>
                   </button>
                 </div>

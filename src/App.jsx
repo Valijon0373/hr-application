@@ -8,7 +8,8 @@ function App() {
   return (
     <Routes>
       <Route path="/" element={<PublicForm />} />
-      <Route path="/admin" element={<AdminLogin />} />
+      <Route path="/login" element={<AdminLogin />} />
+      <Route path="/admin" element={<Navigate to="/login" replace />} />
 
       <Route
         path="/admin/dashboard"

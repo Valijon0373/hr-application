@@ -15,7 +15,7 @@ function RequireAdmin({ children }) {
   const location = useLocation()
 
   if (!isAdminAuthed()) {
-    return <Navigate to="/admin" replace state={{ from: location.pathname }} />
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 
   return children

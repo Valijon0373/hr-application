@@ -25,7 +25,7 @@ function AdminLogin() {
     e.preventDefault()
     setError('')
 
-    const ok = login.trim() === 'admin' && password === 'admin'
+    const ok = login.trim() === 'Admin' && password === 'Admin123!'
     if (!ok) {
       setError("Login yoki parol noto'g'ri.")
       return
