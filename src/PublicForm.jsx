@@ -6,33 +6,25 @@ import { hasSupabaseEnv, supabase } from './lib/supabaseClient'
 
 // Format phone number as +998 XX XXX XX XX
 const formatPhoneNumber = (input) => {
-  // Remove all non-digit characters
-  const digits = input.replace(/\D/g, '')
-  
-  // If input is empty
-  if (!digits) return ''
-  
-  // If starts with 998, use as is, otherwise prepend 998
-  let phoneDigits = digits
-  if (!phoneDigits.startsWith('998')) {
-    phoneDigits = '998' + phoneDigits
-  }
-  
-  // Keep only first 12 digits (998 + 9 digits)
-  phoneDigits = phoneDigits.slice(0, 12)
-  
-  // Format as +998 XX XXX XX XX
-  if (phoneDigits.length <= 3) {
-    return '+' + phoneDigits
-  } else if (phoneDigits.length <= 5) {
-    return '+' + phoneDigits.slice(0, 3) + ' ' + phoneDigits.slice(3)
-  } else if (phoneDigits.length <= 8) {
-    return '+' + phoneDigits.slice(0, 3) + ' ' + phoneDigits.slice(3, 5) + ' ' + phoneDigits.slice(5)
-  } else if (phoneDigits.length <= 10) {
-    return '+' + phoneDigits.slice(0, 3) + ' ' + phoneDigits.slice(3, 5) + ' ' + phoneDigits.slice(5, 8) + ' ' + phoneDigits.slice(8)
-  } else {
-    return '+' + phoneDigits.slice(0, 3) + ' ' + phoneDigits.slice(3, 5) + ' ' + phoneDigits.slice(5, 8) + ' ' + phoneDigits.slice(8, 10) + ' ' + phoneDigits.slice(10)
-  }
+  const digits = String(input ?? '').replace(/\D/g, '')
+
+  // Keep UI prefix always visible: "+998 "
+  const COUNTRY = '998'
+
+  // Strip possible country prefix from user typing/paste
+  let local = digits
+  if (local.startsWith(COUNTRY)) local = local.slice(COUNTRY.length)
+
+  // Keep only 9 local digits (XX XXX XX XX)
+  local = local.slice(0, 9)
+
+  const a = local.slice(0, 2)
+  const b = local.slice(2, 5)
+  const c = local.slice(5, 7)
+  const d = local.slice(7, 9)
+
+  const parts = [a, b, c, d].filter(Boolean)
+  return parts.length ? `+${COUNTRY} ${parts.join(' ')}` : `+${COUNTRY} `
 }
 
 function PublicForm() {
@@ -153,6 +145,14 @@ function PublicForm() {
             <input
               type="tel"
               value={formData.phone}
+              inputMode="numeric"
+              autoComplete="tel"
+              onFocus={() =>
+                setFormData((prev) => ({
+                  ...prev,
+                  phone: prev.phone?.trim() ? prev.phone : '+998 ',
+                }))
+              }
               onChange={(e) => setFormData((prev) => ({ ...prev, phone: formatPhoneNumber(e.target.value) }))}
               placeholder={c.phonePlaceholder}
               className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-800 outline-none transition focus:border-[#22b8ff] focus:ring-2 focus:ring-[#22b8ff]/20"
@@ -302,6 +302,11 @@ function PublicForm() {
 
   const active = stepInfo[currentStep]
 
+  const isPhoneComplete = (value) => {
+    const digits = String(value ?? '').replace(/\D/g, '')
+    return digits.startsWith('998') && digits.length === 12
+  }
+
   const getMissingRequired = (step = null) => {
     const mapByStep = {
       1: ['fio', 'dob'],
@@ -315,6 +320,7 @@ function PublicForm() {
     return keys.filter((field) => {
       const value = formData[field]
       if (field === 'bachelorFile') return !(value instanceof File)
+      if (field === 'phone') return !isPhoneComplete(value)
       return typeof value === 'string' ? value.trim().length === 0 : !value
     })
   }

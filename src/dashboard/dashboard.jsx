@@ -107,7 +107,13 @@ function Dashboard() {
   const [applications, setApplications] = useState([])
   const [selectedApplication, setSelectedApplication] = useState(null)
   const [dataError, setDataError] = useState('')
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try {
+      return window.matchMedia?.('(min-width: 768px)')?.matches ?? true
+    } catch {
+      return true
+    }
+  })
 
   const [isNight, setIsNight] = useState(() => {
     try {
@@ -260,10 +266,20 @@ function Dashboard() {
 
   return (
     <div className={`min-h-screen ${pageBg}`}>
-      <div className="flex min-h-screen">
+      <div className="relative flex min-h-screen">
+        {sidebarOpen ? (
+          <button
+            type="button"
+            className="fixed inset-0 z-30 bg-black/40 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Sidebar yopish"
+          />
+        ) : null}
         <aside
           id="admin-sidebar"
-          className={`flex flex-col ${sidebarOpen ? 'w-[260px] border-r' : 'w-0 border-r-0'} ${panelBorder} ${panelBg} overflow-hidden transition-all duration-300`}
+          className={`fixed inset-y-0 left-0 z-40 flex w-[260px] flex-col border-r ${panelBorder} ${panelBg} overflow-hidden transition-transform duration-300 md:static md:translate-x-0 ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
         >
           <div className="px-6 py-6">
             <div className={`text-sm font-semibold ${isNight ? 'text-slate-100' : 'text-slate-900'}`}>UrSPI Admin</div>
@@ -320,7 +336,7 @@ function Dashboard() {
 
         <div className="flex-1">
           <header className={`border-b ${headerBorder} ${headerBg}`}>
-            <div className="mx-auto flex max-w-[1200px] items-center justify-between px-6 py-4">
+            <div className="mx-auto flex max-w-[1200px] items-center justify-between px-4 py-4 md:px-6">
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -367,7 +383,7 @@ function Dashboard() {
             </div>
           </header>
 
-          <main className="mx-auto max-w-[1200px] px-6 py-6">
+          <main className="mx-auto max-w-[1200px] px-4 py-6 md:px-6">
             {dataError ? (
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
                 {dataError}
@@ -443,7 +459,7 @@ function Dashboard() {
                     <div className={`text-sm font-semibold ${isNight ? 'text-slate-100' : 'text-slate-900'}`}>
                       Oyma-oy arizalar soni
                     </div>
-                    <div className="mt-5 grid grid-cols-6 items-end gap-3">
+                    <div className="mt-5 grid grid-cols-3 items-end gap-3 sm:grid-cols-6">
                       {pieAndBarData.monthlyItems.map((it) => {
                         const maxBarHeight = 130
                         const height =
@@ -509,7 +525,8 @@ function Dashboard() {
                 </div>
 
                 <div className={`mt-5 overflow-hidden rounded-xl border ${panelBorder}`}>
-                  <table className="w-full text-left text-sm">
+                  <div className="w-full overflow-x-auto">
+                    <table className="min-w-[640px] w-full text-left text-sm">
                     <thead
                       className={`text-xs font-semibold ${
                         isNight ? 'bg-slate-800 text-slate-300' : 'bg-slate-50 text-slate-600'
@@ -552,7 +569,8 @@ function Dashboard() {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
