@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { isAdminAuthed, setAdminAuthed } from './RequireAdmin'
+import { authenticateAdminWithPasskey, isPasskeyEnabled, isPasskeySupported } from '../lib/passkey'
+import { MdFingerprint } from 'react-icons/md'
+import { FiLock, FiUser } from 'react-icons/fi'
 import urspiLogo from '../assets/urspi.jpg'
 
 function AdminLogin() {
@@ -10,16 +13,42 @@ function AdminLogin() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
 
   const from = useMemo(() => {
     const p = location.state?.from
     return typeof p === 'string' && p.startsWith('/admin') ? p : '/admin/dashboard'
   }, [location.state])
 
+  const passkeySupported = isPasskeySupported()
+  const passkeyEnabled = isPasskeyEnabled()
+  const canUsePasskey = passkeySupported && passkeyEnabled
+
   useEffect(() => {
     if (!isAdminAuthed()) return
     navigate('/admin/dashboard', { replace: true })
   }, [navigate])
+
+  const onPasskeyLogin = async () => {
+    setError('')
+    setPasskeyLoading(true)
+    try {
+      await authenticateAdminWithPasskey()
+      setAdminAuthed(true)
+      navigate(from, { replace: true })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : ''
+      if (msg === 'PASSKEY_NOT_SUPPORTED') {
+        setError("Brauzer/telefon barmoq izi (passkey) ni qo‘llab-quvvatlamaydi.")
+      } else if (msg === 'PASSKEY_NOT_ENABLED') {
+        setError("Barmoq izi yoqilmagan. Dashboard'dan yoqing.")
+      } else {
+        setError("Barmoq izi bilan kirishda xatolik. Qayta urinib ko‘ring.")
+      }
+    } finally {
+      setPasskeyLoading(false)
+    }
+  }
 
   const onSubmit = (e) => {
     e.preventDefault()
@@ -38,41 +67,45 @@ function AdminLogin() {
   return (
     <div className="min-h-screen bg-[#f2f2f2]">
       <div className="mx-auto flex min-h-screen max-w-[1100px] items-center justify-center px-4 py-10">
-        <div className="w-full max-w-[420px] border border-slate-200 bg-white shadow-sm">
-          <div className="px-10 pb-8 pt-10">
+        <div className="w-full max-w-[420px] rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="px-7 pb-7 pt-8 sm:px-9 sm:pb-8 sm:pt-9">
             <div className="flex flex-col items-center text-center">
-              <img
-                src={urspiLogo}
-                alt="UrSPI"
-                className="h-16 w-16 rounded-full border border-slate-200 object-cover"
-              />
-              <div className="mt-4 text-2xl font-semibold text-slate-900">UrSPI Admin</div>
-              <div className="mt-1 text-xs text-slate-500">
-                Admin foydalanuvchining hisobini kiriting
-              </div>
+              <img src={urspiLogo} alt="UrSPI" className="h-14 w-14 rounded-full border border-slate-200 object-cover" />
+              <div className="mt-4 text-xl font-semibold text-slate-900">UrSPI Admin</div>
+              <div className="mt-1 text-xs text-slate-500">Login, parol yoki barmoq izi orqali kiring</div>
             </div>
 
-            <form onSubmit={onSubmit} className="mt-7 space-y-4">
+            <div className="mt-6 text-center text-lg font-semibold text-slate-900">Kirish</div>
+
+            <form onSubmit={onSubmit} className="mt-5 space-y-4">
               <label className="block space-y-2">
                 <span className="text-xs font-semibold text-slate-700">Login</span>
-                <input
-                  value={login}
-                  onChange={(e) => setLogin(e.target.value)}
-                  type="text"
-                  placeholder="Loginni kiriting"
-                  className="h-10 w-full border border-slate-200 px-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
-                />
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 grid w-10 place-items-center text-slate-500">
+                    <FiUser aria-hidden="true" />
+                  </span>
+                  <input
+                    value={login}
+                    onChange={(e) => setLogin(e.target.value)}
+                    type="text"
+                    placeholder="Loginni kiriting"
+                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 pl-10 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                  />
+                </div>
               </label>
 
               <label className="block space-y-2">
                 <span className="text-xs font-semibold text-slate-700">Parol</span>
                 <div className="relative">
+                  <span className="absolute inset-y-0 left-0 grid w-10 place-items-center text-slate-500">
+                    <FiLock aria-hidden="true" />
+                  </span>
                   <input
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Parolni kiriting"
-                    className="h-10 w-full border border-slate-200 px-3 pr-10 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 pl-10 pr-10 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                   />
                   <button
                     type="button"
@@ -99,17 +132,46 @@ function AdminLogin() {
               </label>
 
               {error ? (
-                <div className="border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                   {error}
                 </div>
               ) : null}
 
-              <button
-                type="submit"
-                className="mt-2 h-10 w-full bg-[#2463eb] text-sm font-semibold text-white transition hover:bg-[#1e56d2]"
-              >
-                Kirish
-              </button>
+              <div className="mt-2 space-y-2">
+                <button
+                  type="submit"
+                  className="h-11 w-full rounded-xl bg-[#2463eb] text-sm font-semibold text-white transition hover:bg-[#1e56d2]"
+                >
+                  Kirish
+                </button>
+
+                <div className="flex items-center gap-3 py-2">
+                  <div className="h-px flex-1 bg-slate-200" />
+                  <div className="text-[11px] font-semibold text-slate-400">OR</div>
+                  <div className="h-px flex-1 bg-slate-200" />
+                </div>
+                <button
+                  type="button"
+                  disabled={passkeyLoading || !canUsePasskey}
+                  onClick={() => {
+                    if (!passkeySupported) {
+                      setError("Brauzer/telefon barmoq izi (passkey) ni qo‘llab-quvvatlamaydi.")
+                      return
+                    }
+                    if (!passkeyEnabled) {
+                      setError("Barmoq izi yoqilmagan. 'Biometrik kirish' bo‘limidan yoqing.")
+                      return
+                    }
+                    void onPasskeyLogin()
+                  }}
+                  className="h-11 w-full rounded-xl border border-blue-200 bg-white text-sm font-semibold text-[#2463eb] transition hover:bg-blue-50 disabled:opacity-60"
+                >
+                  <span className="inline-flex items-center justify-center gap-2">
+                    <MdFingerprint className="text-lg" aria-hidden="true" />
+                    <span>{passkeyLoading ? 'Tekshirilmoqda...' : 'Barmoq izi bilan kirish'}</span>
+                  </span>
+                </button>
+              </div>
             </form>
           </div>
         </div>

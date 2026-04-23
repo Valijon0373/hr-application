@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { setAdminAuthed } from '../admin/RequireAdmin'
 import { hasSupabaseEnv, supabase } from '../lib/supabaseClient'
+import { clearStoredPasskey, isPasskeyEnabled, isPasskeySupported, registerAdminPasskey } from '../lib/passkey'
+import { MdFingerprint } from 'react-icons/md'
 import {
   FiPlusCircle,
   FiCheckCircle,
@@ -19,6 +21,7 @@ import {
 } from 'react-icons/fi'
 
 const THEME_KEY = 'urspi_theme'
+const PASSKEY_UI_KEY = 'admin_passkey_ui'
 
 function StatCard({ title, value, accentClass, isNight }) {
   const containerCls = isNight ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
@@ -100,13 +103,98 @@ function StatusSelect({ value, onChange }) {
   )
 }
 
+function PasskeyPanel({ isNight, panelBorder, panelBg, passkeyEnabled, passkeyLoading, passkeyError, onTogglePasskey }) {
+  const titleCls = isNight ? 'text-slate-100' : 'text-slate-900'
+  const subCls = isNight ? 'text-slate-400' : 'text-slate-500'
+  const badgeOn = isNight ? 'bg-emerald-900/40 text-emerald-200 ring-1 ring-emerald-800' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
+  const badgeOff = isNight ? 'bg-slate-800 text-slate-200 ring-1 ring-slate-700' : 'bg-slate-100 text-slate-700 ring-1 ring-slate-200'
+  const toggleDisabled = passkeyLoading || !isPasskeySupported()
+
+  return (
+    <div className={`rounded-xl border ${panelBorder} ${panelBg} p-5 shadow-sm`}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`grid h-9 w-9 place-items-center rounded-xl ${
+                isNight ? 'bg-indigo-900/40 text-indigo-200' : 'bg-indigo-100 text-indigo-700'
+              }`}
+            >
+              <MdFingerprint className="text-[18px]" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <div className={`text-sm font-semibold ${titleCls}`}>Barmoq izi</div>
+              <div className={`mt-0.5 text-xs ${subCls}`}>Login sahifasida “Barmoq izi bilan kirish” funksiyasini yoqadi.</div>
+            </div>
+
+            <span
+              className={`ml-auto inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold ${
+                passkeyEnabled ? badgeOn : badgeOff
+              }`}
+            >
+              {passkeyEnabled ? <FiCheckCircle aria-hidden="true" /> : <FiXCircle aria-hidden="true" />}
+              {passkeyEnabled ? 'Yoqilgan' : 'O‘chirilgan'}
+            </span>
+          </div>
+
+          {!isPasskeySupported() ? (
+            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+              Bu brauzer/qurilmada passkey qo‘llab-quvvatlanmaydi yoki HTTPS/localhost kerak.
+            </div>
+          ) : null}
+
+          {passkeyError ? (
+            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              {passkeyError}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 sm:flex-col sm:items-end sm:justify-start">
+          <button
+            type="button"
+            disabled={toggleDisabled}
+            onClick={() => void onTogglePasskey()}
+            className={`relative inline-flex h-10 w-[72px] items-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-60 ${
+              passkeyEnabled
+                ? 'border-emerald-200 bg-emerald-500'
+                : `border-slate-200 ${isNight ? 'bg-slate-800' : 'bg-slate-100'}`
+            }`}
+            aria-pressed={passkeyEnabled}
+            aria-label="Barmoq izini yoqish/o‘chirish"
+            title={toggleDisabled ? 'Bu qurilmada qo‘llab-quvvatlanmaydi' : undefined}
+          >
+            <span
+              className={`absolute left-1 top-1 grid h-8 w-8 place-items-center rounded-full bg-white shadow-sm transition-transform ${
+                passkeyEnabled ? 'translate-x-[32px]' : 'translate-x-0'
+              }`}
+            >
+              {passkeyEnabled ? (
+                <FiCheckCircle className="text-emerald-600" aria-hidden="true" />
+              ) : (
+                <FiXCircle className="text-slate-300" aria-hidden="true" />
+              )}
+            </span>
+          </button>
+
+          <div className={`text-[11px] font-semibold ${subCls}`}>
+            {passkeyLoading ? 'Tekshirilmoqda…' : passkeyEnabled ? 'Faol' : 'Nofaol'}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function Dashboard() {
   const navigate = useNavigate()
-  const [active, setActive] = useState('dashboard') // dashboard | arizalar
+  const [active, setActive] = useState('dashboard') // dashboard | arizalar | passkey
 
   const [applications, setApplications] = useState([])
   const [selectedApplication, setSelectedApplication] = useState(null)
   const [dataError, setDataError] = useState('')
+  const [passkeyError, setPasskeyError] = useState('')
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try {
       return window.matchMedia?.('(min-width: 768px)')?.matches ?? true
@@ -121,6 +209,16 @@ function Dashboard() {
     } catch {
       return false
     }
+  })
+
+  const [passkeyEnabled, setPasskeyEnabledUI] = useState(() => {
+    try {
+      const v = localStorage.getItem(PASSKEY_UI_KEY)
+      if (v === '1' || v === '0') return v === '1'
+    } catch {
+      // ignore
+    }
+    return isPasskeyEnabled()
   })
 
   useEffect(() => {
@@ -168,6 +266,14 @@ function Dashboard() {
       // ignore
     }
   }, [isNight])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PASSKEY_UI_KEY, passkeyEnabled ? '1' : '0')
+    } catch {
+      // ignore
+    }
+  }, [passkeyEnabled])
 
   const statusCounts = useMemo(() => {
     const total = applications.length
@@ -238,7 +344,9 @@ function Dashboard() {
   }, [statusCounts, applications])
 
   const headerTitle = useMemo(() => {
-    return active === 'dashboard' ? 'Admin Dashboard' : 'Arizalar'
+    if (active === 'dashboard') return 'Admin Dashboard'
+    if (active === 'arizalar') return 'Arizalar'
+    return 'Biometrik kirish'
   }, [active])
 
   const handleStatusChange = async (id, next) => {
@@ -254,6 +362,42 @@ function Dashboard() {
   const onLogout = () => {
     setAdminAuthed(false)
     navigate('/login', { replace: true })
+  }
+
+  const selectNav = (next) => {
+    setActive(next)
+    try {
+      if (window.innerWidth < 768) setSidebarOpen(false)
+    } catch {
+      // ignore
+    }
+  }
+
+  const onTogglePasskey = async () => {
+    setPasskeyError('')
+    if (!passkeyEnabled) {
+      if (!isPasskeySupported()) {
+        setPasskeyError('Bu qurilmada/passkey (barmoq izi) qo‘llab-quvvatlanmaydi.')
+        return
+      }
+
+      setPasskeyLoading(true)
+      try {
+        await registerAdminPasskey({ username: 'admin' })
+        setPasskeyEnabledUI(true)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : ''
+        if (msg === 'PASSKEY_NOT_SUPPORTED') setPasskeyError('Passkey qo‘llab-quvvatlanmaydi.')
+        else setPasskeyError('Passkey yaratishda xatolik. Qayta urinib ko‘ring.')
+        setPasskeyEnabledUI(false)
+      } finally {
+        setPasskeyLoading(false)
+      }
+      return
+    }
+
+    clearStoredPasskey()
+    setPasskeyEnabledUI(false)
   }
 
   const pageBg = isNight ? 'bg-slate-950' : 'bg-[#f3f6fb]'
@@ -277,7 +421,7 @@ function Dashboard() {
         ) : null}
         <aside
           id="admin-sidebar"
-          className={`fixed inset-y-0 left-0 z-40 flex w-[260px] flex-col border-r ${panelBorder} ${panelBg} overflow-hidden transition-transform duration-300 md:static md:translate-x-0 ${
+          className={`fixed inset-y-0 left-0 z-40 flex w-[240px] flex-col border-r ${panelBorder} ${panelBg} overflow-hidden transition-transform duration-300 sm:w-[260px] md:static md:translate-x-0 ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
@@ -289,7 +433,7 @@ function Dashboard() {
           <nav className="px-3">
             <button
               type="button"
-              onClick={() => setActive('dashboard')}
+              onClick={() => selectNav('dashboard')}
               className={`flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold transition ${
                 active === 'dashboard'
                   ? activeNavCls
@@ -306,7 +450,7 @@ function Dashboard() {
 
             <button
               type="button"
-              onClick={() => setActive('arizalar')}
+              onClick={() => selectNav('arizalar')}
               className={`mt-2 flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold transition ${
                 active === 'arizalar'
                   ? activeNavCls
@@ -319,6 +463,23 @@ function Dashboard() {
                   <FiFileText className="text-lg" aria-hidden="true" />
                 </span>
               Arizalar
+            </button>
+
+            <button
+              type="button"
+              onClick={() => selectNav('passkey')}
+              className={`mt-2 flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold transition ${
+                active === 'passkey'
+                  ? activeNavCls
+                  : inactiveNavText
+              }`}
+            >
+                <span
+                  className={`grid h-8 w-8 place-items-center rounded-lg ${isNight ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-700'}`}
+                >
+                  <MdFingerprint className="text-lg" aria-hidden="true" />
+                </span>
+                Biometrik kirish
             </button>
           </nav>
 
@@ -482,7 +643,7 @@ function Dashboard() {
                   </div>
                 </div>
               </>
-            ) : (
+            ) : active === 'arizalar' ? (
               <div className={`rounded-xl border ${panelBorder} ${panelBg} p-5 shadow-sm`}>
                 <div className="flex items-center justify-between">
                   <div>
@@ -573,6 +734,16 @@ function Dashboard() {
                   </div>
                 </div>
               </div>
+            ) : (
+              <PasskeyPanel
+                isNight={isNight}
+                panelBorder={panelBorder}
+                panelBg={panelBg}
+                passkeyEnabled={passkeyEnabled}
+                passkeyLoading={passkeyLoading}
+                passkeyError={passkeyError}
+                onTogglePasskey={onTogglePasskey}
+              />
             )}
           </main>
 
