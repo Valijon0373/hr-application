@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import TranslateIcon from '../TranslateIcon'
 import urspiLogo from '../assets/urspi.jpg'
 
@@ -26,9 +27,9 @@ function Navbar({ lang, setLang, c }) {
         </div>
 
         <nav className="flex items-center gap-6 text-sm text-white/90">
-          <a href="#" className="hover:text-white">
+          <Link to="/" className="hover:text-white">
             {c.navHome}
-          </a>
+          </Link>
 
           <div ref={langRef} className="relative">
             <button

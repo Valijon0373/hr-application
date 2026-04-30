@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { copy } from './lang'
 import Navbar from './components/navbar'
 import Footer from './components/footer'
 import { hasSupabaseEnv, supabase } from './lib/supabaseClient'
+import { useLocation, useNavigate } from 'react-router-dom'
+import regionsUz from './data/regions.uz.json'
 
 // Format phone number as +998 XX XXX XX XX
 const formatPhoneNumber = (input) => {
@@ -28,6 +30,10 @@ const formatPhoneNumber = (input) => {
 }
 
 function PublicForm() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const vacancyTitle = location?.state?.vacancyTitle
+
   const [currentStep, setCurrentStep] = useState(1)
   const [lang, setLang] = useState('uz')
   const [formData, setFormData] = useState({
@@ -52,6 +58,25 @@ function PublicForm() {
 
   const c = copy[lang]
   const requiredFields = ['fio', 'dob', 'region', 'district', 'phone', 'email', 'higherEd', 'gradYear', 'bachelorFile']
+
+  const regions = useMemo(() => {
+    const list = regionsUz?.regions
+    return Array.isArray(list) ? list : []
+  }, [])
+
+  const districts = useMemo(() => {
+    const regionName = formData.region?.trim()
+    if (!regionName) return []
+    const match = regions.find((r) => r?.name === regionName)
+    const list = match?.districts
+    return Array.isArray(list) ? list : []
+  }, [formData.region, regions])
+
+  useEffect(() => {
+    // If region changes, clear district selection (prevents mismatched pairs).
+    setFormData((prev) => ({ ...prev, district: '' }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.region])
 
   useEffect(() => {
     if (!submitError) return
@@ -117,9 +142,9 @@ function PublicForm() {
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-700 outline-none transition focus:border-[#22b8ff] focus:ring-2 focus:ring-[#22b8ff]/20"
             >
               <option value="">{c.regionSelectPlaceholder}</option>
-              {c.regionOptions.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
+              {regions.map((r) => (
+                <option key={r.name} value={r.name}>
+                  {r.name}
                 </option>
               ))}
             </select>
@@ -129,13 +154,19 @@ function PublicForm() {
             <span className="text-sm font-semibold text-slate-800">
               {c.districtLabel} <span className="text-red-500">*</span>
             </span>
-            <input
-              type="text"
+            <select
               value={formData.district}
               onChange={(e) => setFormData((prev) => ({ ...prev, district: e.target.value }))}
-              placeholder={c.districtPlaceholder}
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-slate-800 outline-none transition focus:border-[#22b8ff] focus:ring-2 focus:ring-[#22b8ff]/20"
-            />
+              disabled={!formData.region?.trim()}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-700 outline-none transition focus:border-[#22b8ff] focus:ring-2 focus:ring-[#22b8ff]/20 disabled:bg-slate-50 disabled:text-slate-400"
+            >
+              <option value="">{formData.region?.trim() ? c.districtPlaceholder : `${c.regionLabel} tanlang`}</option>
+              {districts.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label className="space-y-2">
@@ -482,6 +513,23 @@ function PublicForm() {
             </aside>
 
             <section className="p-6 md:p-9">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                {vacancyTitle ? (
+                  <div className="inline-flex items-center rounded-full bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
+                    {c.selectedVacancyLabel}: {vacancyTitle}
+                  </div>
+                ) : (
+                  <div className="text-sm font-semibold text-slate-500">{c.applyStandaloneHint}</div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => navigate('/')}
+                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  {c.backToHome}
+                </button>
+              </div>
               <h2 className="text-3xl font-semibold text-slate-900">{active.title}</h2>
               <p className="mt-2 text-slate-500">{active.subtitle}</p>
 

@@ -10,11 +10,14 @@ import {
   FiClock,
   FiFileText,
   FiGrid,
+  FiBriefcase,
   FiInbox,
   FiLogOut,
   FiMenu,
   FiSun,
   FiMoon,
+  FiEdit2,
+  FiTrash2,
   FiXCircle,
   FiEye,
   FiX,
@@ -188,11 +191,18 @@ function PasskeyPanel({ isNight, panelBorder, panelBg, passkeyEnabled, passkeyLo
 
 function Dashboard() {
   const navigate = useNavigate()
-  const [active, setActive] = useState('dashboard') // dashboard | arizalar | passkey
+  const [active, setActive] = useState('dashboard') // dashboard | arizalar | vakansiyalar | passkey
 
   const [applications, setApplications] = useState([])
   const [selectedApplication, setSelectedApplication] = useState(null)
   const [dataError, setDataError] = useState('')
+
+  const [vacancies, setVacancies] = useState([])
+  const [vacancyError, setVacancyError] = useState('')
+  const [vacancySaving, setVacancySaving] = useState(false)
+  const [vacancyDialog, setVacancyDialog] = useState(null) // { mode: 'create'|'view'|'edit', value: vacancy }
+  const [vacancyForm, setVacancyForm] = useState({ title: '', rate: '', salaryMin: '', salaryMax: '' })
+
   const [passkeyError, setPasskeyError] = useState('')
   const [passkeyLoading, setPasskeyLoading] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -248,6 +258,35 @@ function Dashboard() {
     }
 
     void loadApplications()
+    return () => {
+      activeReq = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let activeReq = true
+
+    const loadVacancies = async () => {
+      setVacancyError('')
+      if (!hasSupabaseEnv || !supabase) {
+        if (!activeReq) return
+        setVacancies([])
+        setVacancyError('Supabase sozlamalari topilmadi.')
+        return
+      }
+
+      const { data, error } = await supabase.from('vacancies').select('*').order('createdAt', { ascending: false })
+      if (!activeReq) return
+      if (error) {
+        setVacancies([])
+        setVacancyError("Vakansiyalarni yuklashda xatolik bo'ldi.")
+        return
+      }
+
+      setVacancies(Array.isArray(data) ? data : [])
+    }
+
+    void loadVacancies()
     return () => {
       activeReq = false
     }
@@ -346,8 +385,109 @@ function Dashboard() {
   const headerTitle = useMemo(() => {
     if (active === 'dashboard') return 'Admin Dashboard'
     if (active === 'arizalar') return 'Arizalar'
+    if (active === 'vakansiyalar') return 'Vakansiyalar'
     return 'Biometrik kirish'
   }, [active])
+
+  const salaryRangeText = (row) => {
+    const toNum = (v) => {
+      const n = typeof v === 'string' && v.trim() ? Number(v) : Number(v)
+      return Number.isFinite(n) ? n : null
+    }
+    const min = toNum(row?.salaryMin)
+    const max = toNum(row?.salaryMax)
+    const fmt = (v) => (v == null ? '' : v.toLocaleString('uz-UZ'))
+    if (min != null && max != null) return `${fmt(min)} – ${fmt(max)} so'm`
+    if (min != null) return `${fmt(min)}+ so'm`
+    if (max != null) return `0 – ${fmt(max)} so'm`
+    return '-'
+  }
+
+  const openVacancyDialog = (mode, value = null) => {
+    setVacancyError('')
+    setVacancyDialog({ mode, value })
+    if (mode === 'create') {
+      setVacancyForm({ title: '', rate: '', salaryMin: '', salaryMax: '' })
+      return
+    }
+
+    const v = value ?? {}
+    setVacancyForm({
+      title: v.title ?? '',
+      rate: v.rate ?? '',
+      salaryMin: v.salaryMin ?? '',
+      salaryMax: v.salaryMax ?? '',
+    })
+  }
+
+  const closeVacancyDialog = () => {
+    setVacancyDialog(null)
+    setVacancySaving(false)
+    setVacancyError('')
+  }
+
+  const saveVacancy = async () => {
+    setVacancyError('')
+    if (!supabase) return
+
+    const title = String(vacancyForm.title ?? '').trim()
+    if (!title) {
+      setVacancyError("Vakansiya nomini kiriting.")
+      return
+    }
+
+    const normNumOrNull = (v) => {
+      const raw = String(v ?? '').trim()
+      if (!raw) return null
+      const n = Number(raw.replaceAll(' ', '').replaceAll(',', '.'))
+      return Number.isFinite(n) ? n : null
+    }
+
+    const payload = {
+      title,
+      rate: String(vacancyForm.rate ?? '').trim() || null,
+      salaryMin: normNumOrNull(vacancyForm.salaryMin),
+      salaryMax: normNumOrNull(vacancyForm.salaryMax),
+    }
+
+    setVacancySaving(true)
+    try {
+      if (vacancyDialog?.mode === 'edit' && vacancyDialog?.value?.id != null) {
+        const id = vacancyDialog.value.id
+        const { data, error } = await supabase.from('vacancies').update(payload).eq('id', id).select('*').single()
+        if (error) throw error
+        setVacancies((prev) => prev.map((v) => (v.id === id ? data : v)))
+        setVacancyDialog({ mode: 'view', value: data })
+        return
+      }
+
+      const { data, error } = await supabase.from('vacancies').insert(payload).select('*').single()
+      if (error) throw error
+      setVacancies((prev) => [data, ...prev])
+      setVacancyDialog({ mode: 'view', value: data })
+    } catch (err) {
+      const details = err instanceof Error ? err.message : ''
+      setVacancyError(details ? `Saqlashda xatolik: ${details}` : "Saqlashda xatolik bo'ldi.")
+    } finally {
+      setVacancySaving(false)
+    }
+  }
+
+  const deleteVacancy = async (row) => {
+    if (!supabase) return
+    const ok = window.confirm(`Vakansiyani o‘chirasizmi?\n\n${row?.title ?? ''}`)
+    if (!ok) return
+
+    setVacancyError('')
+    const { error } = await supabase.from('vacancies').delete().eq('id', row.id)
+    if (error) {
+      setVacancyError("O‘chirishda xatolik bo'ldi.")
+      return
+    }
+
+    setVacancies((prev) => prev.filter((v) => v.id !== row.id))
+    if (vacancyDialog?.value?.id === row.id) closeVacancyDialog()
+  }
 
   const handleStatusChange = async (id, next) => {
     if (!supabase) return
@@ -463,6 +603,23 @@ function Dashboard() {
                   <FiFileText className="text-lg" aria-hidden="true" />
                 </span>
               Arizalar
+            </button>
+
+            <button
+              type="button"
+              onClick={() => selectNav('vakansiyalar')}
+              className={`mt-2 flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold transition ${
+                active === 'vakansiyalar'
+                  ? activeNavCls
+                  : inactiveNavText
+              }`}
+            >
+                <span
+                  className={`grid h-8 w-8 place-items-center rounded-lg ${isNight ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-700'}`}
+                >
+                  <FiBriefcase className="text-lg" aria-hidden="true" />
+                </span>
+              Vakansiyalar
             </button>
 
             <button
@@ -734,6 +891,100 @@ function Dashboard() {
                   </div>
                 </div>
               </div>
+            ) : active === 'vakansiyalar' ? (
+              <div className={`rounded-xl border ${panelBorder} ${panelBg} p-5 shadow-sm`}>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className={`text-sm font-semibold ${isNight ? 'text-slate-100' : 'text-slate-900'}`}>Vakansiyalar</div>
+                    <div className={`mt-1 text-xs ${isNight ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {vacancies.length ? 'Vakansiyalar ro‘yxati' : "Hozircha vakansiyalar yo'q"}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => openVacancyDialog('create')}
+                    className="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                  >
+                    <FiPlusCircle className="mr-2" aria-hidden="true" />
+                    Qo‘shish
+                  </button>
+                </div>
+
+                {vacancyError ? (
+                  <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{vacancyError}</div>
+                ) : null}
+
+                <div className={`mt-5 overflow-hidden rounded-xl border ${panelBorder}`}>
+                  <div className="w-full overflow-x-auto">
+                    <table className="min-w-[860px] w-full text-left text-sm">
+                      <thead
+                        className={`text-xs font-semibold ${isNight ? 'bg-slate-800 text-slate-300' : 'bg-slate-50 text-slate-600'}`}
+                      >
+                        <tr>
+                          <th className="px-4 py-3">Nom</th>
+                          <th className="px-4 py-3">Stavka</th>
+                          <th className="px-4 py-3">Maosh</th>
+                          <th className="px-4 py-3 text-right">Amallar</th>
+                        </tr>
+                      </thead>
+                      <tbody className={`divide-y ${isNight ? 'divide-slate-700 text-slate-200' : 'divide-slate-200 text-slate-700'}`}>
+                        {vacancies.map((row) => (
+                          <tr key={row.id} className={isNight ? 'hover:bg-slate-800' : 'hover:bg-slate-50'}>
+                            <td className="px-4 py-3 font-semibold">{row.title}</td>
+                            <td className="px-4 py-3">{row.rate || '-'}</td>
+                            <td className="px-4 py-3">{salaryRangeText(row)}</td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => openVacancyDialog('view', row)}
+                                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
+                                    isNight
+                                      ? 'border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800'
+                                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  <FiEye className="mr-1" aria-hidden="true" />
+                                  Ko‘rish
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openVacancyDialog('edit', row)}
+                                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
+                                    isNight
+                                      ? 'border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800'
+                                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                  }`}
+                                >
+                                  <FiEdit2 className="mr-1" aria-hidden="true" />
+                                  Tahrirlash
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => void deleteVacancy(row)}
+                                  className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-100"
+                                >
+                                  <FiTrash2 className="mr-1" aria-hidden="true" />
+                                  O‘chirish
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+
+                        {!vacancies.length ? (
+                          <tr>
+                            <td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-500">
+                              Vakansiya yo‘q.
+                            </td>
+                          </tr>
+                        ) : null}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             ) : (
               <PasskeyPanel
                 isNight={isNight}
@@ -987,6 +1238,166 @@ function Dashboard() {
               </div>
             </div>
           )}
+
+          {vacancyDialog ? (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6" onClick={closeVacancyDialog}>
+              <div
+                className={`max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border ${panelBorder} ${panelBg} p-6 shadow-2xl`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className={`text-base font-semibold ${isNight ? 'text-slate-100' : 'text-slate-900'}`}>
+                      {vacancyDialog.mode === 'create'
+                        ? 'Vakansiya qo‘shish'
+                        : vacancyDialog.mode === 'edit'
+                          ? 'Vakansiyani tahrirlash'
+                          : 'Vakansiya'}
+                    </div>
+                    <div className={`mt-1 text-xs ${isNight ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {vacancyDialog.value?.id != null ? `ID: ${vacancyDialog.value.id}` : 'Yangi'}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={closeVacancyDialog}
+                    aria-label="Yopish"
+                    className={`grid h-8 w-8 place-items-center rounded-full border ${
+                      isNight ? 'border-slate-600 text-slate-200 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <FiX className="text-base" aria-hidden="true" />
+                  </button>
+                </div>
+
+                {vacancyError ? (
+                  <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{vacancyError}</div>
+                ) : null}
+
+                <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <label className="space-y-2 md:col-span-2">
+                    <span className={`text-xs font-semibold ${isNight ? 'text-slate-300' : 'text-slate-600'}`}>
+                      Vakansiya nomi <span className="text-red-500">*</span>
+                    </span>
+                    <input
+                      type="text"
+                      value={vacancyForm.title}
+                      disabled={vacancyDialog.mode === 'view'}
+                      onChange={(e) => setVacancyForm((p) => ({ ...p, title: e.target.value }))}
+                      className={`w-full rounded-xl border px-4 py-3 text-slate-800 outline-none transition ${
+                        isNight ? 'border-slate-700 bg-slate-950 text-slate-100 focus:border-emerald-400' : 'border-slate-200 bg-white focus:border-emerald-500'
+                      }`}
+                      placeholder="Masalan: Dasturchi"
+                    />
+                  </label>
+
+                  <label className="space-y-2">
+                    <span className={`text-xs font-semibold ${isNight ? 'text-slate-300' : 'text-slate-600'}`}>Stavka</span>
+                    <input
+                      type="text"
+                      value={vacancyForm.rate}
+                      disabled={vacancyDialog.mode === 'view'}
+                      onChange={(e) => setVacancyForm((p) => ({ ...p, rate: e.target.value }))}
+                      className={`w-full rounded-xl border px-4 py-3 text-slate-800 outline-none transition ${
+                        isNight ? 'border-slate-700 bg-slate-950 text-slate-100 focus:border-emerald-400' : 'border-slate-200 bg-white focus:border-emerald-500'
+                      }`}
+                      placeholder="Masalan: 1.0"
+                    />
+                  </label>
+
+                  <label className="space-y-2">
+                    <span className={`text-xs font-semibold ${isNight ? 'text-slate-300' : 'text-slate-600'}`}>Maosh (min)</span>
+                    <input
+                      type="text"
+                      value={vacancyForm.salaryMin}
+                      disabled={vacancyDialog.mode === 'view'}
+                      onChange={(e) => setVacancyForm((p) => ({ ...p, salaryMin: e.target.value }))}
+                      className={`w-full rounded-xl border px-4 py-3 text-slate-800 outline-none transition ${
+                        isNight ? 'border-slate-700 bg-slate-950 text-slate-100 focus:border-emerald-400' : 'border-slate-200 bg-white focus:border-emerald-500'
+                      }`}
+                      placeholder="Masalan: 3000000"
+                    />
+                  </label>
+
+                  <label className="space-y-2">
+                    <span className={`text-xs font-semibold ${isNight ? 'text-slate-300' : 'text-slate-600'}`}>Maosh (max)</span>
+                    <input
+                      type="text"
+                      value={vacancyForm.salaryMax}
+                      disabled={vacancyDialog.mode === 'view'}
+                      onChange={(e) => setVacancyForm((p) => ({ ...p, salaryMax: e.target.value }))}
+                      className={`w-full rounded-xl border px-4 py-3 text-slate-800 outline-none transition ${
+                        isNight ? 'border-slate-700 bg-slate-950 text-slate-100 focus:border-emerald-400' : 'border-slate-200 bg-white focus:border-emerald-500'
+                      }`}
+                      placeholder="Masalan: 6000000"
+                    />
+                  </label>
+
+                  <div className="md:col-span-2">
+                    <div className={`text-[11px] font-semibold ${isNight ? 'text-slate-400' : 'text-slate-500'}`}>Ko‘rinishi</div>
+                    <div className={`mt-1 rounded-xl border px-4 py-3 text-sm ${isNight ? 'border-slate-700 bg-slate-950 text-slate-200' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
+                      <div className="font-semibold">{String(vacancyForm.title || '-')}</div>
+                      <div className="mt-1 text-xs opacity-80">
+                        {vacancyForm.rate ? `Stavka: ${vacancyForm.rate} • ` : ''}
+                        {salaryRangeText({ salaryMin: vacancyForm.salaryMin, salaryMax: vacancyForm.salaryMax })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+                  <div className="flex items-center gap-2">
+                    {vacancyDialog.mode === 'view' && vacancyDialog.value ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => openVacancyDialog('edit', vacancyDialog.value)}
+                          className={`inline-flex items-center rounded-lg border px-4 py-2 text-sm font-semibold ${
+                            isNight ? 'border-slate-700 bg-slate-950 text-slate-100 hover:bg-slate-900' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <FiEdit2 className="mr-2" aria-hidden="true" />
+                          Tahrirlash
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void deleteVacancy(vacancyDialog.value)}
+                          className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100"
+                        >
+                          <FiTrash2 className="mr-2" aria-hidden="true" />
+                          O‘chirish
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={closeVacancyDialog}
+                      className={`rounded-lg border px-4 py-2 text-sm font-semibold ${
+                        isNight ? 'border-slate-700 bg-slate-950 text-slate-100 hover:bg-slate-900' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      Yopish
+                    </button>
+
+                    {vacancyDialog.mode !== 'view' ? (
+                      <button
+                        type="button"
+                        onClick={() => void saveVacancy()}
+                        disabled={vacancySaving}
+                        className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {vacancySaving ? 'Saqlanmoqda…' : 'Saqlash'}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

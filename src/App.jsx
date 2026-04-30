@@ -3,11 +3,13 @@ import PublicForm from './PublicForm'
 import AdminLogin from './admin/AdminLogin'
 import RequireAdmin from './admin/RequireAdmin'
 import Dashboard from './dashboard/dashboard'
+import Home from './Home'
 
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<PublicForm />} />
+      <Route path="/" element={<Home />} />
+      <Route path="/apply" element={<PublicForm />} />
       <Route path="/login" element={<AdminLogin />} />
       <Route path="/admin" element={<Navigate to="/login" replace />} />
 
