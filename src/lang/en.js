@@ -16,6 +16,8 @@ const en = {
   quickApplyBody: 'If you want to apply without selecting a vacancy, use this button.',
   rateLabel: 'Rate',
   salaryLabel: 'Salary',
+  workScheduleLabel: 'Working days & hours',
+  createdAtLabel: 'Created date',
   selectedVacancyLabel: 'Selected vacancy',
   applyStandaloneHint: 'Fill out the application form.',
   backToHome: 'Back to home',

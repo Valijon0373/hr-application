@@ -20,6 +20,16 @@ function formatSalaryRange({ min, max, currency = "so'm" }) {
   return ''
 }
 
+function formatCreatedAt(value) {
+  if (!value) return ''
+  const dt = new Date(value)
+  if (Number.isNaN(dt.getTime())) return ''
+  const dd = String(dt.getDate()).padStart(2, '0')
+  const mm = String(dt.getMonth() + 1).padStart(2, '0')
+  const yyyy = dt.getFullYear()
+  return `${dd}.${mm}.${yyyy}`
+}
+
 function Home() {
   const navigate = useNavigate()
   const [lang, setLang] = useState('uz')
@@ -28,6 +38,7 @@ function Home() {
   const [error, setError] = useState('')
 
   const c = copy[lang]
+  const workScheduleText = '6/1, 08:00 - 17:00'
 
   useEffect(() => {
     let active = true
@@ -65,13 +76,16 @@ function Home() {
   }, [])
 
   const cards = useMemo(() => {
-    return vacancies.map((v) => {
+    return vacancies
+      .filter((v) => v?.isActive !== false)
+      .map((v) => {
       const salaryText = formatSalaryRange({ min: v.salaryMin, max: v.salaryMax })
       return {
         id: v.id,
         title: v.title ?? '-',
         rate: v.rate ?? '',
         salaryText,
+        createdAt: v.createdAt ?? '',
       }
     })
   }, [vacancies])
@@ -132,14 +146,29 @@ function Home() {
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
                           <div className="truncate text-lg font-semibold text-slate-900">{v.title}</div>
-                          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600">
-                            {v.rate ? (
-                              <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1">{c.rateLabel}: {v.rate}</span>
-                            ) : null}
-                            {v.salaryText ? (
-                              <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">
-                                {c.salaryLabel}: {v.salaryText}
+                          {v.createdAt ? (
+                            <div className="mt-1 text-sm font-medium text-slate-500">
+                              {c.createdAtLabel}: {formatCreatedAt(v.createdAt)}
+                            </div>
+                          ) : null}
+                          <div className="mt-2 flex flex-wrap items-center gap-2 font-semibold text-slate-600">
+                            <div className="flex flex-wrap items-center gap-2">
+                              {v.rate ? (
+                                <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-sm">
+                                  {c.rateLabel}: {v.rate}
+                                </span>
+                              ) : null}
+                              <span className="inline-flex items-center rounded-full bg-sky-50 px-3 py-1.5 text-sm text-sky-700">
+                                {c.workScheduleLabel}: {workScheduleText}
                               </span>
+                            </div>
+
+                            {v.salaryText ? (
+                              <div className="w-full">
+                                <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1.5 text-base font-semibold text-emerald-700">
+                                  {c.salaryLabel}: {v.salaryText}
+                                </span>
+                              </div>
                             ) : null}
                           </div>
                         </div>

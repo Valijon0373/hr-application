@@ -16,6 +16,8 @@ const uz = {
   quickApplyBody: "Agar vakansiyaga ariza topshirgan bo‘lsangiz, shu tugma bilan tekshiring.",
   rateLabel: 'Stavka',
   salaryLabel: 'Maosh',
+  workScheduleLabel: 'Ish kunlari va vaqti',
+  createdAtLabel: 'Yaratilgan sana',
   selectedVacancyLabel: 'Tanlangan vakansiya',
   applyStandaloneHint: "Ariza formasini to‘ldiring.",
   backToHome: 'Bosh sahifaga',

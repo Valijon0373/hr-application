@@ -48,6 +48,7 @@ create table if not exists public.vacancies (
   rate text,
   "salaryMin" numeric,
   "salaryMax" numeric,
+  "isActive" boolean not null default true,
   "createdAt" timestamptz not null default now()
 );
 

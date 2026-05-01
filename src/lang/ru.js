@@ -16,6 +16,8 @@ const ru = {
   quickApplyBody: 'Если хотите подать заявку без выбора вакансии — нажмите эту кнопку.',
   rateLabel: 'Ставка',
   salaryLabel: 'Зарплата',
+  workScheduleLabel: 'Рабочие дни и время',
+  createdAtLabel: 'Дата создания',
   selectedVacancyLabel: 'Выбранная вакансия',
   applyStandaloneHint: 'Заполните форму заявки.',
   backToHome: 'На главную',

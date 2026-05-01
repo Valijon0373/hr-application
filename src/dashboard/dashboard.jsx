@@ -489,6 +489,33 @@ function Dashboard() {
     if (vacancyDialog?.value?.id === row.id) closeVacancyDialog()
   }
 
+  const toggleVacancyActive = async (row) => {
+    if (!supabase) return
+    if (!row?.id) return
+
+    setVacancyError('')
+    const next = !(row?.isActive ?? true)
+
+    const { data, error } = await supabase
+      .from('vacancies')
+      .update({ isActive: next })
+      .eq('id', row.id)
+      .select('*')
+      .single()
+
+    if (error) {
+      setVacancyError(
+        error?.message
+          ? `Holatni o‘zgartirishda xatolik: ${error.message}`
+          : "Holatni o‘zgartirishda xatolik bo'ldi.",
+      )
+      return
+    }
+
+    setVacancies((prev) => prev.map((v) => (v.id === row.id ? data : v)))
+    if (vacancyDialog?.value?.id === row.id) setVacancyDialog((prev) => (prev ? { ...prev, value: data } : prev))
+  }
+
   const handleStatusChange = async (id, next) => {
     if (!supabase) return
 
@@ -925,6 +952,7 @@ function Dashboard() {
                           <th className="px-4 py-3">Nom</th>
                           <th className="px-4 py-3">Stavka</th>
                           <th className="px-4 py-3">Maosh</th>
+                          <th className="px-4 py-3">Holat</th>
                           <th className="px-4 py-3 text-right">Amallar</th>
                         </tr>
                       </thead>
@@ -934,6 +962,40 @@ function Dashboard() {
                             <td className="px-4 py-3 font-semibold">{row.title}</td>
                             <td className="px-4 py-3">{row.rate || '-'}</td>
                             <td className="px-4 py-3">{salaryRangeText(row)}</td>
+                            <td className="px-4 py-3">
+                              <button
+                                type="button"
+                                onClick={() => void toggleVacancyActive(row)}
+                                aria-pressed={!(row?.isActive === false)}
+                                className={`relative inline-flex h-7 w-[52px] items-center rounded-full border transition ${
+                                  row?.isActive === false
+                                    ? isNight
+                                      ? 'border-slate-700 bg-slate-900'
+                                      : 'border-slate-200 bg-slate-100'
+                                    : 'border-emerald-200 bg-emerald-500'
+                                }`}
+                                title={row?.isActive === false ? 'O‘chirilgan' : 'Yoqilgan'}
+                              >
+                                <span
+                                  className={`absolute left-0.5 top-0.5 h-6 w-6 rounded-full bg-white shadow-sm transition-transform ${
+                                    row?.isActive === false ? 'translate-x-0' : 'translate-x-[22px]'
+                                  }`}
+                                />
+                              </button>
+                              <span
+                                className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                  row?.isActive === false
+                                    ? isNight
+                                      ? 'bg-slate-800 text-slate-200'
+                                      : 'bg-slate-100 text-slate-700'
+                                    : isNight
+                                      ? 'bg-emerald-900/40 text-emerald-200 ring-1 ring-emerald-800'
+                                      : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
+                                }`}
+                              >
+                                {row?.isActive === false ? 'O‘chirilgan' : 'Yoqilgan'}
+                              </span>
+                            </td>
                             <td className="px-4 py-3">
                               <div className="flex items-center justify-end gap-2">
                                 <button
@@ -975,7 +1037,7 @@ function Dashboard() {
 
                         {!vacancies.length ? (
                           <tr>
-                            <td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-500">
+                            <td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-500">
                               Vakansiya yo‘q.
                             </td>
                           </tr>
