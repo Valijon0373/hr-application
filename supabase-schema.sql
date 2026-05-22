@@ -59,6 +59,7 @@ create table if not exists public.vacancies (
 alter table public.vacancies add column if not exists "workSchedule" text;
 alter table public.vacancies add column if not exists description text;
 alter table public.vacancies add column if not exists requirements text;
+alter table public.vacancies add column if not exists "isActive" boolean not null default true;
 
 alter table public.vacancies enable row level security;
 

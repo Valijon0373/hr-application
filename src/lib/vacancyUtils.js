@@ -1,3 +1,55 @@
+/** Raqamni kiritish maydonida ko‘rsatish: 5000 → "5 000" */
+export function formatSalaryInput(value) {
+  const digits = String(value ?? '').replace(/\D/g, '')
+  if (!digits) return ''
+  const n = Number(digits)
+  if (!Number.isFinite(n)) return ''
+  return n.toLocaleString('uz-UZ')
+}
+
+export function parseSalaryNumber(value) {
+  const raw = String(value ?? '').trim()
+  if (!raw) return null
+  const n = Number(raw.replace(/[\s\u00A0\u202F]/g, '').replaceAll(',', '.'))
+  return Number.isFinite(n) ? n : null
+}
+
+export function buildVacancyPayload(form) {
+  const title = String(form.title ?? '').trim()
+  const payload = { title }
+
+  const rate = String(form.rate ?? '').trim()
+  if (rate) payload.rate = rate
+
+  const salaryMin = parseSalaryNumber(form.salaryMin)
+  if (salaryMin != null) payload.salaryMin = salaryMin
+
+  const salaryMax = parseSalaryNumber(form.salaryMax)
+  if (salaryMax != null) payload.salaryMax = salaryMax
+
+  const workSchedule = String(form.workSchedule ?? '').trim()
+  if (workSchedule) payload.workSchedule = workSchedule
+
+  const description = String(form.description ?? '').trim()
+  if (description) payload.description = description
+
+  const requirements = String(form.requirements ?? '').trim()
+  if (requirements) payload.requirements = requirements
+
+  return payload
+}
+
+export function isVacancySchemaError(message) {
+  const m = String(message ?? '').toLowerCase()
+  return (
+    m.includes('workschedule') ||
+    m.includes('description') ||
+    m.includes('requirements') ||
+    m.includes('isactive') ||
+    m.includes('schema cache')
+  )
+}
+
 export function formatSalaryRange({ min, max, currency = "so'm" }) {
   const fmt = (v) => {
     const n = Number(v)

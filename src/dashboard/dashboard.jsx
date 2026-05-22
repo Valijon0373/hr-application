@@ -2,6 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { setAdminAuthed } from '../admin/RequireAdmin'
 import { hasSupabaseEnv, supabase } from '../lib/supabaseClient'
+import {
+  buildVacancyPayload,
+  formatSalaryInput,
+  isVacancySchemaError,
+  parseSalaryNumber,
+} from '../lib/vacancyUtils'
 import { clearStoredPasskey, isPasskeyEnabled, isPasskeySupported, registerAdminPasskey } from '../lib/passkey'
 import { MdFingerprint } from 'react-icons/md'
 import {
@@ -398,10 +404,7 @@ function Dashboard() {
   }, [active])
 
   const salaryRangeText = (row) => {
-    const toNum = (v) => {
-      const n = typeof v === 'string' && v.trim() ? Number(v) : Number(v)
-      return Number.isFinite(n) ? n : null
-    }
+    const toNum = (v) => parseSalaryNumber(v) ?? (Number.isFinite(Number(v)) ? Number(v) : null)
     const min = toNum(row?.salaryMin)
     const max = toNum(row?.salaryMax)
     const fmt = (v) => (v == null ? '' : v.toLocaleString('uz-UZ'))
@@ -431,12 +434,16 @@ function Dashboard() {
     setVacancyForm({
       title: v.title ?? '',
       rate: v.rate ?? '',
-      salaryMin: v.salaryMin ?? '',
-      salaryMax: v.salaryMax ?? '',
+      salaryMin: v.salaryMin != null && v.salaryMin !== '' ? formatSalaryInput(String(v.salaryMin)) : '',
+      salaryMax: v.salaryMax != null && v.salaryMax !== '' ? formatSalaryInput(String(v.salaryMax)) : '',
       workSchedule: v.workSchedule ?? '',
       description: v.description ?? '',
       requirements: v.requirements ?? '',
     })
+  }
+
+  const onSalaryFieldChange = (field) => (e) => {
+    setVacancyForm((p) => ({ ...p, [field]: formatSalaryInput(e.target.value) }))
   }
 
   const closeVacancyDialog = () => {
@@ -447,7 +454,10 @@ function Dashboard() {
 
   const saveVacancy = async () => {
     setVacancyError('')
-    if (!supabase) return
+    if (!supabase) {
+      setVacancyError('Supabase ulanmagan. .env faylda VITE_SUPABASE_URL va VITE_SUPABASE_ANON_KEY ni tekshiring.')
+      return
+    }
 
     const title = String(vacancyForm.title ?? '').trim()
     if (!title) {
@@ -455,22 +465,7 @@ function Dashboard() {
       return
     }
 
-    const normNumOrNull = (v) => {
-      const raw = String(v ?? '').trim()
-      if (!raw) return null
-      const n = Number(raw.replaceAll(' ', '').replaceAll(',', '.'))
-      return Number.isFinite(n) ? n : null
-    }
-
-    const payload = {
-      title,
-      rate: String(vacancyForm.rate ?? '').trim() || null,
-      salaryMin: normNumOrNull(vacancyForm.salaryMin),
-      salaryMax: normNumOrNull(vacancyForm.salaryMax),
-      workSchedule: String(vacancyForm.workSchedule ?? '').trim() || null,
-      description: String(vacancyForm.description ?? '').trim() || null,
-      requirements: String(vacancyForm.requirements ?? '').trim() || null,
-    }
+    const payload = buildVacancyPayload(vacancyForm)
 
     setVacancySaving(true)
     try {
@@ -488,7 +483,13 @@ function Dashboard() {
       setVacancies((prev) => [data, ...prev])
       setVacancyDialog({ mode: 'view', value: data })
     } catch (err) {
-      const details = err instanceof Error ? err.message : ''
+      const details = err instanceof Error ? err.message : String(err?.message ?? err ?? '')
+      if (isVacancySchemaError(details)) {
+        setVacancyError(
+          "Supabase jadvali yangilanmagan. SQL Editor da supabase-schema.sql faylidagi vacancies (58–92-qatorlar) qismini bir marta ishga tushiring.",
+        )
+        return
+      }
       setVacancyError(details ? `Saqlashda xatolik: ${details}` : "Saqlashda xatolik bo'ldi.")
     } finally {
       setVacancySaving(false)
@@ -1415,30 +1416,48 @@ function Dashboard() {
 
                   <label className="space-y-2">
                     <span className={`text-xs font-semibold ${isNight ? 'text-slate-300' : 'text-slate-600'}`}>Maosh (min)</span>
-                    <input
-                      type="text"
-                      value={vacancyForm.salaryMin}
-                      disabled={vacancyDialog.mode === 'view'}
-                      onChange={(e) => setVacancyForm((p) => ({ ...p, salaryMin: e.target.value }))}
-                      className={`w-full rounded-xl border px-4 py-3 text-slate-800 outline-none transition ${
-                        isNight ? 'border-slate-700 bg-slate-950 text-slate-100 focus:border-emerald-400' : 'border-slate-200 bg-white focus:border-emerald-500'
-                      }`}
-                      placeholder="Masalan: 3000000"
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={vacancyForm.salaryMin}
+                        disabled={vacancyDialog.mode === 'view'}
+                        onChange={onSalaryFieldChange('salaryMin')}
+                        className={`min-w-0 flex-1 rounded-xl border px-4 py-3 text-slate-800 outline-none transition ${
+                          isNight ? 'border-slate-700 bg-slate-950 text-slate-100 focus:border-emerald-400' : 'border-slate-200 bg-white focus:border-emerald-500'
+                        }`}
+                        placeholder="Masalan: 3 000 000"
+                      />
+                      <span
+                        className={`shrink-0 text-sm font-semibold ${isNight ? 'text-slate-400' : 'text-slate-500'}`}
+                        aria-hidden="true"
+                      >
+                        UZS
+                      </span>
+                    </div>
                   </label>
 
                   <label className="space-y-2">
                     <span className={`text-xs font-semibold ${isNight ? 'text-slate-300' : 'text-slate-600'}`}>Maosh (max)</span>
-                    <input
-                      type="text"
-                      value={vacancyForm.salaryMax}
-                      disabled={vacancyDialog.mode === 'view'}
-                      onChange={(e) => setVacancyForm((p) => ({ ...p, salaryMax: e.target.value }))}
-                      className={`w-full rounded-xl border px-4 py-3 text-slate-800 outline-none transition ${
-                        isNight ? 'border-slate-700 bg-slate-950 text-slate-100 focus:border-emerald-400' : 'border-slate-200 bg-white focus:border-emerald-500'
-                      }`}
-                      placeholder="Masalan: 6000000"
-                    />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={vacancyForm.salaryMax}
+                        disabled={vacancyDialog.mode === 'view'}
+                        onChange={onSalaryFieldChange('salaryMax')}
+                        className={`min-w-0 flex-1 rounded-xl border px-4 py-3 text-slate-800 outline-none transition ${
+                          isNight ? 'border-slate-700 bg-slate-950 text-slate-100 focus:border-emerald-400' : 'border-slate-200 bg-white focus:border-emerald-500'
+                        }`}
+                        placeholder="Masalan: 6 000 000"
+                      />
+                      <span
+                        className={`shrink-0 text-sm font-semibold ${isNight ? 'text-slate-400' : 'text-slate-500'}`}
+                        aria-hidden="true"
+                      >
+                        UZS
+                      </span>
+                    </div>
                   </label>
 
                   <label className="space-y-2 md:col-span-2">
