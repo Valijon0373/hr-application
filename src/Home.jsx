@@ -4,31 +4,7 @@ import Navbar from './components/navbar'
 import Footer from './components/footer'
 import { copy } from './lang'
 import { hasSupabaseEnv, supabase } from './lib/supabaseClient'
-
-function formatSalaryRange({ min, max, currency = "so'm" }) {
-  const fmt = (v) => {
-    const n = Number(v)
-    if (!Number.isFinite(n)) return ''
-    return n.toLocaleString('uz-UZ')
-  }
-
-  const a = fmt(min)
-  const b = fmt(max)
-  if (a && b) return `${a} – ${b} ${currency}`
-  if (a) return `${a}+ ${currency}`
-  if (b) return `0 – ${b} ${currency}`
-  return ''
-}
-
-function formatCreatedAt(value) {
-  if (!value) return ''
-  const dt = new Date(value)
-  if (Number.isNaN(dt.getTime())) return ''
-  const dd = String(dt.getDate()).padStart(2, '0')
-  const mm = String(dt.getMonth() + 1).padStart(2, '0')
-  const yyyy = dt.getFullYear()
-  return `${dd}.${mm}.${yyyy}`
-}
+import { formatCreatedAt, mapVacancyToView } from './lib/vacancyUtils'
 
 function Home() {
   const navigate = useNavigate()
@@ -38,7 +14,6 @@ function Home() {
   const [error, setError] = useState('')
 
   const c = copy[lang]
-  const workScheduleText = '6/1, 08:00 - 17:00'
 
   useEffect(() => {
     let active = true
@@ -76,18 +51,7 @@ function Home() {
   }, [])
 
   const cards = useMemo(() => {
-    return vacancies
-      .filter((v) => v?.isActive !== false)
-      .map((v) => {
-      const salaryText = formatSalaryRange({ min: v.salaryMin, max: v.salaryMax })
-      return {
-        id: v.id,
-        title: v.title ?? '-',
-        rate: v.rate ?? '',
-        salaryText,
-        createdAt: v.createdAt ?? '',
-      }
-    })
+    return vacancies.filter((v) => v?.isActive !== false).map(mapVacancyToView)
   }, [vacancies])
 
   return (
@@ -152,35 +116,32 @@ function Home() {
                             </div>
                           ) : null}
                           <div className="mt-2 flex flex-wrap items-center gap-2 font-semibold text-slate-600">
-                            <div className="flex flex-wrap items-center gap-2">
-                              {v.rate ? (
-                                <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-sm">
-                                  {c.rateLabel}: {v.rate}
-                                </span>
-                              ) : null}
-                              <span className="inline-flex items-center rounded-full bg-sky-50 px-3 py-1.5 text-sm text-sky-700">
-                                {c.workScheduleLabel}: {workScheduleText}
+                            {v.workSchedule ? (
+                              <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-sm text-slate-700">
+                                {c.workScheduleLabel}: {v.workSchedule}
                               </span>
-                            </div>
-
+                            ) : null}
+                            {v.rate ? (
+                              <span className="inline-flex items-center rounded-full bg-sky-50 px-3 py-1.5 text-sm text-sky-700">
+                                {c.rateLabel}: {v.rate}
+                              </span>
+                            ) : null}
                             {v.salaryText ? (
-                              <div className="w-full">
-                                <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1.5 text-base font-semibold text-emerald-700">
-                                  {c.salaryLabel}: {v.salaryText}
-                                </span>
-                              </div>
+                              <span className="inline-flex w-full items-center rounded-full bg-emerald-50 px-3 py-1.5 text-base font-semibold text-emerald-700">
+                                {c.salaryLabel}: {v.salaryText}
+                              </span>
                             ) : null}
                           </div>
                         </div>
                       </div>
 
-                      <div className="mt-6 flex items-center justify-end gap-3">
+                      <div className="mt-6 flex items-center justify-end">
                         <button
                           type="button"
-                          onClick={() => navigate('/apply', { state: { vacancyId: v.id, vacancyTitle: v.title } })}
-                          className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#16cbff] to-[#10c968] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(23,196,171,0.35)] transition hover:brightness-105"
+                          onClick={() => navigate(`/vacancy/${v.id}`)}
+                          className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-6 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
                         >
-                          {c.apply}
+                          {c.details}
                         </button>
                       </div>
                     </div>
@@ -202,4 +163,3 @@ function Home() {
 }
 
 export default Home
-

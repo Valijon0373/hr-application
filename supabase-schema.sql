@@ -48,9 +48,17 @@ create table if not exists public.vacancies (
   rate text,
   "salaryMin" numeric,
   "salaryMax" numeric,
+  "workSchedule" text,
+  description text,
+  requirements text,
   "isActive" boolean not null default true,
   "createdAt" timestamptz not null default now()
 );
+
+-- Mavjud jadval uchun (Supabase SQL Editor da bir marta ishga tushiring)
+alter table public.vacancies add column if not exists "workSchedule" text;
+alter table public.vacancies add column if not exists description text;
+alter table public.vacancies add column if not exists requirements text;
 
 alter table public.vacancies enable row level security;
 

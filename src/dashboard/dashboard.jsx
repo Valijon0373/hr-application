@@ -201,7 +201,15 @@ function Dashboard() {
   const [vacancyError, setVacancyError] = useState('')
   const [vacancySaving, setVacancySaving] = useState(false)
   const [vacancyDialog, setVacancyDialog] = useState(null) // { mode: 'create'|'view'|'edit', value: vacancy }
-  const [vacancyForm, setVacancyForm] = useState({ title: '', rate: '', salaryMin: '', salaryMax: '' })
+  const [vacancyForm, setVacancyForm] = useState({
+    title: '',
+    rate: '',
+    salaryMin: '',
+    salaryMax: '',
+    workSchedule: '',
+    description: '',
+    requirements: '',
+  })
 
   const [passkeyError, setPasskeyError] = useState('')
   const [passkeyLoading, setPasskeyLoading] = useState(false)
@@ -407,7 +415,15 @@ function Dashboard() {
     setVacancyError('')
     setVacancyDialog({ mode, value })
     if (mode === 'create') {
-      setVacancyForm({ title: '', rate: '', salaryMin: '', salaryMax: '' })
+      setVacancyForm({
+        title: '',
+        rate: '',
+        salaryMin: '',
+        salaryMax: '',
+        workSchedule: '',
+        description: '',
+        requirements: '',
+      })
       return
     }
 
@@ -417,6 +433,9 @@ function Dashboard() {
       rate: v.rate ?? '',
       salaryMin: v.salaryMin ?? '',
       salaryMax: v.salaryMax ?? '',
+      workSchedule: v.workSchedule ?? '',
+      description: v.description ?? '',
+      requirements: v.requirements ?? '',
     })
   }
 
@@ -448,6 +467,9 @@ function Dashboard() {
       rate: String(vacancyForm.rate ?? '').trim() || null,
       salaryMin: normNumOrNull(vacancyForm.salaryMin),
       salaryMax: normNumOrNull(vacancyForm.salaryMax),
+      workSchedule: String(vacancyForm.workSchedule ?? '').trim() || null,
+      description: String(vacancyForm.description ?? '').trim() || null,
+      requirements: String(vacancyForm.requirements ?? '').trim() || null,
     }
 
     setVacancySaving(true)
@@ -950,7 +972,7 @@ function Dashboard() {
                       >
                         <tr>
                           <th className="px-4 py-3">Nom</th>
-                          <th className="px-4 py-3">Stavka</th>
+                          <th className="px-4 py-3">Stavka / Ish vaqti</th>
                           <th className="px-4 py-3">Maosh</th>
                           <th className="px-4 py-3">Holat</th>
                           <th className="px-4 py-3 text-right">Amallar</th>
@@ -960,7 +982,14 @@ function Dashboard() {
                         {vacancies.map((row) => (
                           <tr key={row.id} className={isNight ? 'hover:bg-slate-800' : 'hover:bg-slate-50'}>
                             <td className="px-4 py-3 font-semibold">{row.title}</td>
-                            <td className="px-4 py-3">{row.rate || '-'}</td>
+                            <td className="px-4 py-3">
+                              <div>{row.rate ? `Stavka: ${row.rate}` : '-'}</div>
+                              {row.workSchedule ? (
+                                <div className={`mt-0.5 text-xs ${isNight ? 'text-slate-400' : 'text-slate-500'}`}>
+                                  {row.workSchedule}
+                                </div>
+                              ) : null}
+                            </td>
                             <td className="px-4 py-3">{salaryRangeText(row)}</td>
                             <td className="px-4 py-3">
                               <button
@@ -1369,6 +1398,22 @@ function Dashboard() {
                   </label>
 
                   <label className="space-y-2">
+                    <span className={`text-xs font-semibold ${isNight ? 'text-slate-300' : 'text-slate-600'}`}>
+                      Ish kunlari va vaqti
+                    </span>
+                    <input
+                      type="text"
+                      value={vacancyForm.workSchedule}
+                      disabled={vacancyDialog.mode === 'view'}
+                      onChange={(e) => setVacancyForm((p) => ({ ...p, workSchedule: e.target.value }))}
+                      className={`w-full rounded-xl border px-4 py-3 text-slate-800 outline-none transition ${
+                        isNight ? 'border-slate-700 bg-slate-950 text-slate-100 focus:border-emerald-400' : 'border-slate-200 bg-white focus:border-emerald-500'
+                      }`}
+                      placeholder="Masalan: 6/1, 08:00 – 17:00"
+                    />
+                  </label>
+
+                  <label className="space-y-2">
                     <span className={`text-xs font-semibold ${isNight ? 'text-slate-300' : 'text-slate-600'}`}>Maosh (min)</span>
                     <input
                       type="text"
@@ -1396,14 +1441,56 @@ function Dashboard() {
                     />
                   </label>
 
+                  <label className="space-y-2 md:col-span-2">
+                    <span className={`text-xs font-semibold ${isNight ? 'text-slate-300' : 'text-slate-600'}`}>Vakansiya izohi</span>
+                    <textarea
+                      rows={3}
+                      value={vacancyForm.description}
+                      disabled={vacancyDialog.mode === 'view'}
+                      onChange={(e) => setVacancyForm((p) => ({ ...p, description: e.target.value }))}
+                      className={`w-full resize-y rounded-xl border px-4 py-3 text-slate-800 outline-none transition ${
+                        isNight ? 'border-slate-700 bg-slate-950 text-slate-100 focus:border-emerald-400' : 'border-slate-200 bg-white focus:border-emerald-500'
+                      }`}
+                      placeholder="Vakansiya haqida qisqa ma’lumot"
+                    />
+                  </label>
+
+                  <label className="space-y-2 md:col-span-2">
+                    <span className={`text-xs font-semibold ${isNight ? 'text-slate-300' : 'text-slate-600'}`}>Talablar</span>
+                    <textarea
+                      rows={3}
+                      value={vacancyForm.requirements}
+                      disabled={vacancyDialog.mode === 'view'}
+                      onChange={(e) => setVacancyForm((p) => ({ ...p, requirements: e.target.value }))}
+                      className={`w-full resize-y rounded-xl border px-4 py-3 text-slate-800 outline-none transition ${
+                        isNight ? 'border-slate-700 bg-slate-950 text-slate-100 focus:border-emerald-400' : 'border-slate-200 bg-white focus:border-emerald-500'
+                      }`}
+                      placeholder="Masalan: tajriba, til bilimi, malaka"
+                    />
+                  </label>
+
                   <div className="md:col-span-2">
                     <div className={`text-[11px] font-semibold ${isNight ? 'text-slate-400' : 'text-slate-500'}`}>Ko‘rinishi</div>
                     <div className={`mt-1 rounded-xl border px-4 py-3 text-sm ${isNight ? 'border-slate-700 bg-slate-950 text-slate-200' : 'border-slate-200 bg-slate-50 text-slate-700'}`}>
                       <div className="font-semibold">{String(vacancyForm.title || '-')}</div>
                       <div className="mt-1 text-xs opacity-80">
-                        {vacancyForm.rate ? `Stavka: ${vacancyForm.rate} • ` : ''}
+                        {vacancyForm.rate ? `Stavka: ${vacancyForm.rate}` : ''}
+                        {vacancyForm.rate && vacancyForm.workSchedule ? ' • ' : ''}
+                        {vacancyForm.workSchedule ? `Ish vaqti: ${vacancyForm.workSchedule}` : ''}
+                        {(vacancyForm.rate || vacancyForm.workSchedule) && (vacancyForm.salaryMin || vacancyForm.salaryMax)
+                          ? ' • '
+                          : ''}
                         {salaryRangeText({ salaryMin: vacancyForm.salaryMin, salaryMax: vacancyForm.salaryMax })}
                       </div>
+                      {vacancyForm.description ? (
+                        <div className="mt-2 whitespace-pre-wrap text-xs opacity-80">{vacancyForm.description}</div>
+                      ) : null}
+                      {vacancyForm.requirements ? (
+                        <div className="mt-2 whitespace-pre-wrap text-xs opacity-80">
+                          <span className="font-semibold">Talablar: </span>
+                          {vacancyForm.requirements}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </div>

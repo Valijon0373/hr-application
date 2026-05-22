@@ -4,11 +4,13 @@ import AdminLogin from './admin/AdminLogin'
 import RequireAdmin from './admin/RequireAdmin'
 import Dashboard from './dashboard/dashboard'
 import Home from './Home'
+import VacancyDetail from './VacancyDetail'
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/vacancy/:id" element={<VacancyDetail />} />
       <Route path="/apply" element={<PublicForm />} />
       <Route path="/login" element={<AdminLogin />} />
       <Route path="/admin" element={<Navigate to="/login" replace />} />
