@@ -1,17 +1,29 @@
+/** Butun sonni bo‘shliq bilan formatlash: 1338000 → "1 338 000" */
+export function formatAmountDisplay(value) {
+  const n = Math.round(Number(value))
+  if (!Number.isFinite(n) || n <= 0) return ''
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+}
+
 /** Raqamni kiritish maydonida ko‘rsatish: 5000 → "5 000" */
 export function formatSalaryInput(value) {
   const digits = String(value ?? '').replace(/\D/g, '')
   if (!digits) return ''
-  const n = Number(digits)
-  if (!Number.isFinite(n)) return ''
-  return n.toLocaleString('uz-UZ')
+  return formatAmountDisplay(Number(digits))
 }
 
 export function parseSalaryNumber(value) {
-  const raw = String(value ?? '').trim()
-  if (!raw) return null
-  const n = Number(raw.replace(/[\s\u00A0\u202F]/g, '').replaceAll(',', '.'))
+  if (value == null || value === '') return null
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
+  const digits = String(value).replace(/\D/g, '')
+  if (!digits) return null
+  const n = Number(digits)
   return Number.isFinite(n) ? n : null
+}
+
+function normalizeSalaryValue(value) {
+  const n = parseSalaryNumber(value)
+  return n != null && n > 0 ? n : null
 }
 
 export function buildVacancyPayload(form) {
@@ -51,17 +63,16 @@ export function isVacancySchemaError(message) {
 }
 
 export function formatSalaryRange({ min, max, currency = "so'm" }) {
-  const fmt = (v) => {
-    const n = Number(v)
-    if (!Number.isFinite(n)) return ''
-    return n.toLocaleString('uz-UZ')
-  }
+  const minN = normalizeSalaryValue(min)
+  const maxN = normalizeSalaryValue(max)
+  if (minN == null && maxN == null) return ''
 
-  const a = fmt(min)
-  const b = fmt(max)
+  const a = minN != null ? formatAmountDisplay(minN) : ''
+  const b = maxN != null ? formatAmountDisplay(maxN) : ''
+
   if (a && b) return `${a} – ${b} ${currency}`
   if (a) return `${a}+ ${currency}`
-  if (b) return `0 – ${b} ${currency}`
+  if (b) return `${b} gacha ${currency}`
   return ''
 }
 

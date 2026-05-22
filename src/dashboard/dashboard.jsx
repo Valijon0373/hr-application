@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { setAdminAuthed } from '../admin/RequireAdmin'
 import { hasSupabaseEnv, supabase } from '../lib/supabaseClient'
 import {
   buildVacancyPayload,
   formatSalaryInput,
+  formatSalaryRange,
   isVacancySchemaError,
-  parseSalaryNumber,
 } from '../lib/vacancyUtils'
 import { clearStoredPasskey, isPasskeyEnabled, isPasskeySupported, registerAdminPasskey } from '../lib/passkey'
 import { MdFingerprint } from 'react-icons/md'
@@ -205,6 +205,8 @@ function Dashboard() {
 
   const [vacancies, setVacancies] = useState([])
   const [vacancyError, setVacancyError] = useState('')
+  const [vacancyToast, setVacancyToast] = useState('')
+  const vacancyToastTimerRef = useRef(null)
   const [vacancySaving, setVacancySaving] = useState(false)
   const [vacancyDialog, setVacancyDialog] = useState(null) // { mode: 'create'|'view'|'edit', value: vacancy }
   const [vacancyForm, setVacancyForm] = useState({
@@ -403,16 +405,23 @@ function Dashboard() {
     return 'Biometrik kirish'
   }, [active])
 
-  const salaryRangeText = (row) => {
-    const toNum = (v) => parseSalaryNumber(v) ?? (Number.isFinite(Number(v)) ? Number(v) : null)
-    const min = toNum(row?.salaryMin)
-    const max = toNum(row?.salaryMax)
-    const fmt = (v) => (v == null ? '' : v.toLocaleString('uz-UZ'))
-    if (min != null && max != null) return `${fmt(min)} – ${fmt(max)} so'm`
-    if (min != null) return `${fmt(min)}+ so'm`
-    if (max != null) return `0 – ${fmt(max)} so'm`
-    return '-'
+  const salaryRangeText = (row) => formatSalaryRange({ min: row?.salaryMin, max: row?.salaryMax }) || '-'
+
+  const showVacancyToast = (message) => {
+    if (vacancyToastTimerRef.current) clearTimeout(vacancyToastTimerRef.current)
+    setVacancyToast(message)
+    vacancyToastTimerRef.current = setTimeout(() => {
+      setVacancyToast('')
+      vacancyToastTimerRef.current = null
+    }, 3000)
   }
+
+  useEffect(
+    () => () => {
+      if (vacancyToastTimerRef.current) clearTimeout(vacancyToastTimerRef.current)
+    },
+    [],
+  )
 
   const openVacancyDialog = (mode, value = null) => {
     setVacancyError('')
@@ -475,6 +484,7 @@ function Dashboard() {
         if (error) throw error
         setVacancies((prev) => prev.map((v) => (v.id === id ? data : v)))
         setVacancyDialog({ mode: 'view', value: data })
+        showVacancyToast('Muvaqqatli Tahrirlandi')
         return
       }
 
@@ -482,6 +492,7 @@ function Dashboard() {
       if (error) throw error
       setVacancies((prev) => [data, ...prev])
       setVacancyDialog({ mode: 'view', value: data })
+      showVacancyToast("Muvaqqatli Qo'shildi")
     } catch (err) {
       const details = err instanceof Error ? err.message : String(err?.message ?? err ?? '')
       if (isVacancySchemaError(details)) {
@@ -510,6 +521,7 @@ function Dashboard() {
 
     setVacancies((prev) => prev.filter((v) => v.id !== row.id))
     if (vacancyDialog?.value?.id === row.id) closeVacancyDialog()
+    showVacancyToast("Muvaqqatli o'chirildi")
   }
 
   const toggleVacancyActive = async (row) => {
@@ -600,6 +612,22 @@ function Dashboard() {
 
   return (
     <div className={`min-h-screen ${pageBg}`}>
+      {vacancyToast ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed inset-x-0 top-4 z-[70] flex justify-center px-4"
+        >
+          <div
+            className={`pointer-events-auto inline-flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-semibold shadow-lg ${
+              isNight ? 'border-red-900/60 bg-slate-900' : 'border-red-200 bg-white'
+            }`}
+          >
+            <FiCheckCircle className="h-5 w-5 shrink-0 text-red-600" aria-hidden="true" />
+            <span className="text-red-600">{vacancyToast}</span>
+          </div>
+        </div>
+      ) : null}
       <div className="relative flex min-h-screen">
         {sidebarOpen ? (
           <button
