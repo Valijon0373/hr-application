@@ -11,7 +11,7 @@ function App() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/vacancy/:id" element={<VacancyDetail />} />
-      <Route path="/apply" element={<PublicForm />} />
+      <Route path="/apply/:vacancyId?" element={<PublicForm />} />
       <Route path="/login" element={<AdminLogin />} />
       <Route path="/admin" element={<Navigate to="/login" replace />} />
 

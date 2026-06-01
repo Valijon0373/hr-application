@@ -128,7 +128,7 @@ function VacancyDetail() {
                 </Link>
                 <button
                   type="button"
-                  onClick={() => navigate('/apply', { state: { vacancyId: v.id, vacancyTitle: v.title } })}
+                  onClick={() => navigate(`/apply/${v.id}`, { state: { vacancyTitle: v.title } })}
                   className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#16cbff] to-[#10c968] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(23,196,171,0.35)] transition hover:brightness-105"
                 >
                   {c.apply}

@@ -135,13 +135,20 @@ function Home() {
                         </div>
                       </div>
 
-                      <div className="mt-6 flex items-center justify-end">
+                      <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
                         <button
                           type="button"
                           onClick={() => navigate(`/vacancy/${v.id}`)}
                           className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-6 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50"
                         >
                           {c.details}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/apply/${v.id}`, { state: { vacancyTitle: v.title } })}
+                          className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#16cbff] to-[#10c968] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(23,196,171,0.35)] transition hover:brightness-105"
+                        >
+                          {c.apply}
                         </button>
                       </div>
                     </div>

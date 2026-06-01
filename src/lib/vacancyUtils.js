@@ -36,8 +36,12 @@ export function buildVacancyPayload(form) {
   const salaryMin = parseSalaryNumber(form.salaryMin)
   if (salaryMin != null) payload.salaryMin = salaryMin
 
-  const salaryMax = parseSalaryNumber(form.salaryMax)
-  if (salaryMax != null) payload.salaryMax = salaryMax
+  if (form.hasSalaryMax) {
+    const salaryMax = parseSalaryNumber(form.salaryMax)
+    if (salaryMax != null) payload.salaryMax = salaryMax
+  } else {
+    payload.salaryMax = null
+  }
 
   const workSchedule = String(form.workSchedule ?? '').trim()
   if (workSchedule) payload.workSchedule = workSchedule
@@ -98,4 +102,23 @@ export function mapVacancyToView(v) {
     requirements: v.requirements ?? '',
     createdAt: v.createdAt ?? '',
   }
+}
+
+export function getApplicationVacancyLabel(app, vacancyTitleById = null) {
+  const stored = String(app?.vacancyTitle ?? '').trim()
+  if (stored) return stored
+  const id = app?.vacancyId
+  if (id != null && vacancyTitleById?.has?.(id)) return vacancyTitleById.get(id)
+  if (id != null) return `Vakansiya #${id}`
+  return '-'
+}
+
+export function isApplicationVacancyColumnError(error) {
+  const msg = String(error?.message ?? error ?? '').toLowerCase()
+  return msg.includes('vacancyid') || msg.includes('vacancytitle') || msg.includes('vacancy')
+}
+
+export function isStatusNoteColumnError(error) {
+  const msg = String(error?.message ?? error ?? '').toLowerCase()
+  return msg.includes('statusnote') || msg.includes('status note')
 }

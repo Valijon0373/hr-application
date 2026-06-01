@@ -4,30 +4,34 @@ import { setAdminAuthed } from '../admin/RequireAdmin'
 import { hasSupabaseEnv, supabase } from '../lib/supabaseClient'
 import {
   buildVacancyPayload,
+  formatCreatedAt,
   formatSalaryInput,
   formatSalaryRange,
+  getApplicationVacancyLabel,
+  isStatusNoteColumnError,
   isVacancySchemaError,
 } from '../lib/vacancyUtils'
 import { clearStoredPasskey, isPasskeyEnabled, isPasskeySupported, registerAdminPasskey } from '../lib/passkey'
-import { MdFingerprint } from 'react-icons/md'
 import {
-  FiPlusCircle,
-  FiCheckCircle,
-  FiClock,
-  FiFileText,
-  FiGrid,
-  FiBriefcase,
-  FiInbox,
-  FiLogOut,
-  FiMenu,
-  FiSun,
-  FiMoon,
-  FiEdit2,
-  FiTrash2,
-  FiXCircle,
-  FiEye,
-  FiX,
-} from 'react-icons/fi'
+  BellRing,
+  PlusCircle,
+  CheckCircle,
+  Clock,
+  FileText,
+  LayoutGrid,
+  Briefcase,
+  Inbox,
+  LogOut,
+  Menu,
+  Sun,
+  Moon,
+  Pencil,
+  Trash2,
+  XCircle,
+  Eye,
+  X,
+  Fingerprint,
+} from 'lucide-react'
 
 const THEME_KEY = 'urspi_theme'
 const PASSKEY_UI_KEY = 'admin_passkey_ui'
@@ -61,10 +65,10 @@ function StatusCard({ title, value, icon, accentClass, isNight }) {
 
 function StatusPill({ statusKey }) {
   const map = {
-    yangi: { text: 'Yangi', cls: 'bg-blue-50 text-blue-700 ring-blue-100', icon: <FiPlusCircle /> },
-    qabul: { text: 'Qabul qilingan', cls: 'bg-emerald-50 text-emerald-700 ring-emerald-100', icon: <FiCheckCircle /> },
-    jarayonda: { text: 'Jarayonda', cls: 'bg-yellow-50 text-yellow-700 ring-yellow-100', icon: <FiClock /> },
-    rad: { text: 'Rad etilgan', cls: 'bg-red-50 text-red-700 ring-red-100', icon: <FiXCircle /> },
+    yangi: { text: 'Yangi', cls: 'bg-blue-50 text-blue-700 ring-blue-100', icon: <BellRing aria-hidden="true" /> },
+    qabul: { text: 'Qabul qilingan', cls: 'bg-emerald-50 text-emerald-700 ring-emerald-100', icon: <CheckCircle /> },
+    jarayonda: { text: 'Jarayonda', cls: 'bg-yellow-50 text-yellow-700 ring-yellow-100', icon: <Clock /> },
+    rad: { text: 'Rad etilgan', cls: 'bg-red-50 text-red-700 ring-red-100', icon: <XCircle /> },
   }
 
   const item = map[statusKey] ?? map.jarayonda
@@ -77,12 +81,12 @@ function StatusPill({ statusKey }) {
   )
 }
 
-function StatusSelect({ value, onChange }) {
+function StatusSelect({ value, onChange, disabled }) {
   const options = [
-    { key: 'yangi', label: 'Yangi', icon: <FiPlusCircle aria-hidden="true" /> },
-    { key: 'jarayonda', label: 'Jarayonda', icon: <FiClock aria-hidden="true" /> },
-    { key: 'qabul', label: 'Qabul qilindi', icon: <FiCheckCircle aria-hidden="true" /> },
-    { key: 'rad', label: 'Rad etilgan', icon: <FiXCircle aria-hidden="true" /> },
+    { key: 'yangi', label: 'Yangi', icon: <BellRing aria-hidden="true" /> },
+    { key: 'jarayonda', label: 'Jarayonda', icon: <Clock aria-hidden="true" /> },
+    { key: 'qabul', label: 'Qabul qilindi', icon: <CheckCircle aria-hidden="true" /> },
+    { key: 'rad', label: 'Rad etilgan', icon: <XCircle aria-hidden="true" /> },
   ]
 
   const active = options.find((o) => o.key === value) ?? options[0]
@@ -99,8 +103,9 @@ function StatusSelect({ value, onChange }) {
       <span className="text-sm">{active.icon}</span>
       <select
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        className="w-auto bg-transparent text-xs font-semibold text-current outline-none"
+        className="w-auto bg-transparent text-xs font-semibold text-current outline-none disabled:cursor-not-allowed disabled:opacity-60"
       >
         {options.map((opt) => (
           <option key={opt.key} value={opt.key}>
@@ -129,7 +134,7 @@ function PasskeyPanel({ isNight, panelBorder, panelBg, passkeyEnabled, passkeyLo
                 isNight ? 'bg-indigo-900/40 text-indigo-200' : 'bg-indigo-100 text-indigo-700'
               }`}
             >
-              <MdFingerprint className="text-[18px]" aria-hidden="true" />
+              <Fingerprint className="text-[18px]" aria-hidden="true" />
             </span>
             <div className="min-w-0">
               <div className={`text-sm font-semibold ${titleCls}`}>Barmoq izi</div>
@@ -141,7 +146,7 @@ function PasskeyPanel({ isNight, panelBorder, panelBg, passkeyEnabled, passkeyLo
                 passkeyEnabled ? badgeOn : badgeOff
               }`}
             >
-              {passkeyEnabled ? <FiCheckCircle aria-hidden="true" /> : <FiXCircle aria-hidden="true" />}
+              {passkeyEnabled ? <CheckCircle aria-hidden="true" /> : <XCircle aria-hidden="true" />}
               {passkeyEnabled ? 'Yoqilgan' : 'O‘chirilgan'}
             </span>
           </div>
@@ -179,9 +184,9 @@ function PasskeyPanel({ isNight, panelBorder, panelBg, passkeyEnabled, passkeyLo
               }`}
             >
               {passkeyEnabled ? (
-                <FiCheckCircle className="text-emerald-600" aria-hidden="true" />
+                <CheckCircle className="text-emerald-600" aria-hidden="true" />
               ) : (
-                <FiXCircle className="text-slate-300" aria-hidden="true" />
+                <XCircle className="text-slate-300" aria-hidden="true" />
               )}
             </span>
           </button>
@@ -201,6 +206,10 @@ function Dashboard() {
 
   const [applications, setApplications] = useState([])
   const [selectedApplication, setSelectedApplication] = useState(null)
+  const [statusDraft, setStatusDraft] = useState('yangi')
+  const [statusNote, setStatusNote] = useState('')
+  const [statusSaving, setStatusSaving] = useState(false)
+  const [statusError, setStatusError] = useState('')
   const [dataError, setDataError] = useState('')
 
   const [vacancies, setVacancies] = useState([])
@@ -214,6 +223,7 @@ function Dashboard() {
     rate: '',
     salaryMin: '',
     salaryMax: '',
+    hasSalaryMax: false,
     workSchedule: '',
     description: '',
     requirements: '',
@@ -338,6 +348,16 @@ function Dashboard() {
     return { total, qabul, jarayonda, rad }
   }, [applications])
 
+  const vacancyTitleById = useMemo(() => {
+    const map = new Map()
+    for (const v of vacancies) {
+      if (v?.id != null) map.set(v.id, v.title)
+    }
+    return map
+  }, [vacancies])
+
+  const vacancyLabel = (app) => getApplicationVacancyLabel(app, vacancyTitleById)
+
   const pieAndBarData = useMemo(() => {
     const qabul = statusCounts.qabul
     const jarayonda = statusCounts.jarayonda
@@ -432,6 +452,7 @@ function Dashboard() {
         rate: '',
         salaryMin: '',
         salaryMax: '',
+        hasSalaryMax: false,
         workSchedule: '',
         description: '',
         requirements: '',
@@ -440,11 +461,13 @@ function Dashboard() {
     }
 
     const v = value ?? {}
+    const hasMax = v.salaryMax != null && v.salaryMax !== ''
     setVacancyForm({
       title: v.title ?? '',
       rate: v.rate ?? '',
       salaryMin: v.salaryMin != null && v.salaryMin !== '' ? formatSalaryInput(String(v.salaryMin)) : '',
-      salaryMax: v.salaryMax != null && v.salaryMax !== '' ? formatSalaryInput(String(v.salaryMax)) : '',
+      salaryMax: hasMax ? formatSalaryInput(String(v.salaryMax)) : '',
+      hasSalaryMax: hasMax,
       workSchedule: v.workSchedule ?? '',
       description: v.description ?? '',
       requirements: v.requirements ?? '',
@@ -551,15 +574,90 @@ function Dashboard() {
     if (vacancyDialog?.value?.id === row.id) setVacancyDialog((prev) => (prev ? { ...prev, value: data } : prev))
   }
 
-  const handleStatusChange = async (id, next) => {
-    if (!supabase) return
+  useEffect(() => {
+    if (!selectedApplication) return
+    setStatusError('')
+    setStatusDraft(selectedApplication.statusKey || 'yangi')
+    setStatusNote(selectedApplication.statusNote || '')
+  }, [selectedApplication])
 
-    const { error } = await supabase.from('applications').update({ statusKey: next }).eq('id', id)
-    if (error) return
-
-    setApplications((prev) => prev.map((a) => (a.id === id ? { ...a, statusKey: next } : a)))
-    setSelectedApplication((prev) => (prev && prev.id === id ? { ...prev, statusKey: next } : prev))
+  const applyStatusLocally = (rowId, next, note) => {
+    const patch = { statusKey: next }
+    if (note !== undefined) patch.statusNote = note
+    setApplications((prev) => prev.map((a) => (a.id === rowId ? { ...a, ...patch } : a)))
+    setSelectedApplication((prev) => (prev && prev.id === rowId ? { ...prev, ...patch } : prev))
   }
+
+  const handleStatusChange = async (id, next, note) => {
+    setStatusError('')
+    if (!supabase) {
+      setStatusError('Supabase ulanmagan.')
+      return false
+    }
+
+    const payload = { statusKey: next }
+    if (next === 'qabul' && note !== undefined) payload.statusNote = note
+
+    const runUpdate = (body) => supabase.from('applications').update(body).eq('id', id)
+
+    let { error } = await runUpdate(payload)
+
+    if (error && isStatusNoteColumnError(error) && 'statusNote' in payload) {
+      const { statusNote: _note, ...withoutNote } = payload
+      ;({ error } = await runUpdate(withoutNote))
+    }
+
+    if (error) {
+      const msg = error.message || ''
+      if (msg.toLowerCase().includes('policy') || error.code === '42501') {
+        setStatusError(
+          'Yangilash rad etildi. Supabase SQL Editor da quyidagi UPDATE policy ni ishga tushiring (supabase-schema.sql, 39–45-qatorlar).',
+        )
+      } else {
+        setStatusError(msg ? `Statusni saqlashda xatolik: ${msg}` : "Statusni saqlashda xatolik bo'ldi.")
+      }
+      return false
+    }
+
+    applyStatusLocally(id, next, next === 'qabul' && note !== undefined ? note : undefined)
+    return true
+  }
+
+  const handleStatusDraftChange = async (next) => {
+    if (!selectedApplication?.id) return
+
+    const prevKey = selectedApplication.statusKey || 'yangi'
+    const prevNote = selectedApplication.statusNote || ''
+
+    setStatusDraft(next)
+    setStatusSaving(true)
+
+    const note = next === 'qabul' ? statusNote.trim() || null : undefined
+    const ok = await handleStatusChange(selectedApplication.id, next, note)
+
+    setStatusSaving(false)
+    if (!ok) {
+      setStatusDraft(prevKey)
+      setStatusNote(prevNote)
+      return
+    }
+    if (next !== 'qabul') setStatusNote('')
+  }
+
+  const handleStatusSaveWithNote = async () => {
+    if (!selectedApplication?.id || statusDraft !== 'qabul') return
+
+    setStatusSaving(true)
+    const ok = await handleStatusChange(selectedApplication.id, 'qabul', statusNote.trim() || null)
+    setStatusSaving(false)
+    if (!ok) return
+    setStatusDraft('qabul')
+  }
+
+  const statusNoteDirty =
+    selectedApplication &&
+    statusDraft === 'qabul' &&
+    statusNote.trim() !== (selectedApplication.statusNote || '').trim()
 
   const onLogout = () => {
     setAdminAuthed(false)
@@ -611,7 +709,7 @@ function Dashboard() {
   const activeNavCls = isNight ? 'bg-emerald-900/40 text-emerald-200 ring-1 ring-emerald-800' : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100'
 
   return (
-    <div className={`min-h-screen ${pageBg}`}>
+    <div className={`h-screen overflow-hidden ${pageBg}`}>
       {vacancyToast ? (
         <div
           role="status"
@@ -623,12 +721,12 @@ function Dashboard() {
               isNight ? 'border-red-900/60 bg-slate-900' : 'border-red-200 bg-white'
             }`}
           >
-            <FiCheckCircle className="h-5 w-5 shrink-0 text-red-600" aria-hidden="true" />
+            <CheckCircle className="h-5 w-5 shrink-0 text-red-600" aria-hidden="true" />
             <span className="text-red-600">{vacancyToast}</span>
           </div>
         </div>
       ) : null}
-      <div className="relative flex min-h-screen">
+      <div className="relative flex h-full min-h-0">
         {sidebarOpen ? (
           <button
             type="button"
@@ -639,7 +737,7 @@ function Dashboard() {
         ) : null}
         <aside
           id="admin-sidebar"
-          className={`fixed inset-y-0 left-0 z-40 flex w-[240px] flex-col border-r ${panelBorder} ${panelBg} overflow-hidden transition-transform duration-300 sm:w-[260px] md:static md:translate-x-0 ${
+          className={`fixed inset-y-0 left-0 z-40 flex h-screen w-[240px] shrink-0 flex-col overflow-hidden border-r ${panelBorder} ${panelBg} transition-transform duration-300 sm:w-[260px] md:static md:h-screen md:translate-x-0 ${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
@@ -661,7 +759,7 @@ function Dashboard() {
                 <span
                   className={`grid h-8 w-8 place-items-center rounded-lg ${isNight ? 'bg-emerald-900/60 text-emerald-200' : 'bg-emerald-100 text-emerald-700'}`}
                 >
-                  <FiGrid className="text-lg" aria-hidden="true" />
+                  <LayoutGrid className="text-lg" aria-hidden="true" />
                 </span>
               Dashboard
             </button>
@@ -678,7 +776,7 @@ function Dashboard() {
                 <span
                   className={`grid h-8 w-8 place-items-center rounded-lg ${isNight ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-700'}`}
                 >
-                  <FiFileText className="text-lg" aria-hidden="true" />
+                  <FileText className="text-lg" aria-hidden="true" />
                 </span>
               Arizalar
             </button>
@@ -695,7 +793,7 @@ function Dashboard() {
                 <span
                   className={`grid h-8 w-8 place-items-center rounded-lg ${isNight ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-700'}`}
                 >
-                  <FiBriefcase className="text-lg" aria-hidden="true" />
+                  <Briefcase className="text-lg" aria-hidden="true" />
                 </span>
               Vakansiyalar
             </button>
@@ -712,7 +810,7 @@ function Dashboard() {
                 <span
                   className={`grid h-8 w-8 place-items-center rounded-lg ${isNight ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-700'}`}
                 >
-                  <MdFingerprint className="text-lg" aria-hidden="true" />
+                  <Fingerprint className="text-lg" aria-hidden="true" />
                 </span>
                 Biometrik kirish
             </button>
@@ -724,14 +822,14 @@ function Dashboard() {
               onClick={onLogout}
               className="w-full rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700"
             >
-              <FiLogOut className="mr-2 inline-block translate-y-[-1px]" aria-hidden="true" />
+              <LogOut className="mr-2 inline-block translate-y-[-1px]" aria-hidden="true" />
               Chiqish
             </button>
           </div>
         </aside>
 
-        <div className="flex-1">
-          <header className={`border-b ${headerBorder} ${headerBg}`}>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <header className={`shrink-0 border-b ${headerBorder} ${headerBg}`}>
             <div className="mx-auto flex max-w-[1200px] items-center justify-between px-4 py-4 md:px-6">
               <div className="flex items-center gap-3">
                 <button
@@ -744,7 +842,7 @@ function Dashboard() {
                   aria-controls="admin-sidebar"
                   onClick={() => setSidebarOpen((v) => !v)}
                 >
-                  <FiMenu className="text-lg" aria-hidden="true" />
+                  <Menu className="text-lg" aria-hidden="true" />
                 </button>
                 <div className={`text-lg font-semibold ${isNight ? 'text-slate-100' : 'text-slate-900'}`}>
                   {headerTitle}
@@ -760,7 +858,7 @@ function Dashboard() {
                   aria-label="Tungi rejim"
                   onClick={() => setIsNight((v) => !v)}
                 >
-                  {isNight ? <FiSun className="text-lg" aria-hidden="true" /> : <FiMoon className="text-lg" aria-hidden="true" />}
+                  {isNight ? <Sun className="text-lg" aria-hidden="true" /> : <Moon className="text-lg" aria-hidden="true" />}
                 </button>
 
                 <div
@@ -779,7 +877,7 @@ function Dashboard() {
             </div>
           </header>
 
-          <main className="mx-auto max-w-[1200px] px-4 py-6 md:px-6">
+          <main className="mx-auto min-h-0 w-full max-w-[1200px] flex-1 overflow-y-auto px-4 py-6 md:px-6">
             {dataError ? (
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
                 {dataError}
@@ -791,28 +889,28 @@ function Dashboard() {
                   <StatusCard
                     title="Jami"
                     value={statusCounts.total}
-                    icon={<FiInbox aria-hidden="true" />}
+                    icon={<Inbox aria-hidden="true" />}
                     accentClass={isNight ? 'text-slate-200' : 'text-slate-700'}
                     isNight={isNight}
                   />
                   <StatusCard
                     title="Qabul qilingan"
                     value={statusCounts.qabul}
-                    icon={<FiCheckCircle aria-hidden="true" />}
+                    icon={<CheckCircle aria-hidden="true" />}
                     accentClass={isNight ? 'text-emerald-300' : 'text-emerald-700'}
                     isNight={isNight}
                   />
                   <StatusCard
                     title="Jarayonda"
                     value={statusCounts.jarayonda}
-                    icon={<FiClock aria-hidden="true" />}
+                    icon={<Clock aria-hidden="true" />}
                     accentClass={isNight ? 'text-yellow-300' : 'text-yellow-700'}
                     isNight={isNight}
                   />
                   <StatusCard
                     title="Rad etilgan"
                     value={statusCounts.rad}
-                    icon={<FiXCircle aria-hidden="true" />}
+                    icon={<XCircle aria-hidden="true" />}
                     accentClass={isNight ? 'text-red-300' : 'text-red-700'}
                     isNight={isNight}
                   />
@@ -893,28 +991,28 @@ function Dashboard() {
                   <StatusCard
                     title="Jami"
                     value={statusCounts.total}
-                    icon={<FiInbox aria-hidden="true" />}
+                    icon={<Inbox aria-hidden="true" />}
                     accentClass={isNight ? 'text-slate-200' : 'text-slate-700'}
                     isNight={isNight}
                   />
                   <StatusCard
                     title="Qabul qilingan"
                     value={statusCounts.qabul}
-                    icon={<FiCheckCircle aria-hidden="true" />}
+                    icon={<CheckCircle aria-hidden="true" />}
                     accentClass={isNight ? 'text-emerald-300' : 'text-emerald-700'}
                     isNight={isNight}
                   />
                   <StatusCard
                     title="Jarayonda"
                     value={statusCounts.jarayonda}
-                    icon={<FiClock aria-hidden="true" />}
+                    icon={<Clock aria-hidden="true" />}
                     accentClass={isNight ? 'text-yellow-300' : 'text-yellow-700'}
                     isNight={isNight}
                   />
                   <StatusCard
                     title="Rad etilgan"
                     value={statusCounts.rad}
-                    icon={<FiXCircle aria-hidden="true" />}
+                    icon={<XCircle aria-hidden="true" />}
                     accentClass={isNight ? 'text-red-300' : 'text-red-700'}
                     isNight={isNight}
                   />
@@ -922,7 +1020,7 @@ function Dashboard() {
 
                 <div className={`mt-5 overflow-hidden rounded-xl border ${panelBorder}`}>
                   <div className="w-full overflow-x-auto">
-                    <table className="min-w-[640px] w-full text-left text-sm">
+                    <table className="min-w-[760px] w-full text-left text-sm">
                     <thead
                       className={`text-xs font-semibold ${
                         isNight ? 'bg-slate-800 text-slate-300' : 'bg-slate-50 text-slate-600'
@@ -930,6 +1028,8 @@ function Dashboard() {
                     >
                       <tr>
                         <th className="px-4 py-3">F.I.O</th>
+                        <th className="px-4 py-3">Vakansiya</th>
+                        <th className="px-4 py-3 whitespace-nowrap">Topshirilgan sana</th>
                         <th className="px-4 py-3">Telefon</th>
                         <th className="px-4 py-3 text-center">Ma'lumot</th>
                         <th className="px-4 py-3">Holat</th>
@@ -944,6 +1044,12 @@ function Dashboard() {
                           className={isNight ? 'hover:bg-slate-800' : 'hover:bg-slate-50'}
                         >
                           <td className="px-4 py-3 font-semibold">{row.fio}</td>
+                          <td className="max-w-[200px] truncate px-4 py-3" title={vacancyLabel(row)}>
+                            {vacancyLabel(row)}
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3">
+                            {formatCreatedAt(row.createdAt) || '-'}
+                          </td>
                           <td className="px-4 py-3">{row.phone}</td>
                           <td className="px-4 py-3 text-center">
                             <button
@@ -955,7 +1061,7 @@ function Dashboard() {
                                   : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                               }`}
                             >
-                              <FiEye className="mr-1" aria-hidden="true" />
+                              <Eye className="mr-1" aria-hidden="true" />
                               Ko‘rish
                             </button>
                           </td>
@@ -984,7 +1090,7 @@ function Dashboard() {
                     onClick={() => openVacancyDialog('create')}
                     className="inline-flex items-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
                   >
-                    <FiPlusCircle className="mr-2" aria-hidden="true" />
+                    <PlusCircle className="mr-2" aria-hidden="true" />
                     Qo‘shish
                   </button>
                 </div>
@@ -1065,7 +1171,7 @@ function Dashboard() {
                                       : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                                   }`}
                                 >
-                                  <FiEye className="mr-1" aria-hidden="true" />
+                                  <Eye className="mr-1" aria-hidden="true" />
                                   Ko‘rish
                                 </button>
                                 <button
@@ -1077,7 +1183,7 @@ function Dashboard() {
                                       : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                                   }`}
                                 >
-                                  <FiEdit2 className="mr-1" aria-hidden="true" />
+                                  <Pencil className="mr-1" aria-hidden="true" />
                                   Tahrirlash
                                 </button>
                                 <button
@@ -1085,7 +1191,7 @@ function Dashboard() {
                                   onClick={() => void deleteVacancy(row)}
                                   className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-100"
                                 >
-                                  <FiTrash2 className="mr-1" aria-hidden="true" />
+                                  <Trash2 className="mr-1" aria-hidden="true" />
                                   O‘chirish
                                 </button>
                               </div>
@@ -1146,11 +1252,23 @@ function Dashboard() {
                         : 'border-slate-300 text-slate-700 hover:bg-slate-100'
                     }`}
                   >
-                    <FiX className="text-base" aria-hidden="true" />
+                    <X className="text-base" aria-hidden="true" />
                   </button>
                 </div>
 
                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div className="md:col-span-2">
+                    <div className="text-[11px] font-semibold text-slate-400">Vakansiya</div>
+                    <div className={isNight ? 'text-slate-100' : 'text-slate-800'}>
+                      {vacancyLabel(selectedApplication)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold text-slate-400">Topshirilgan sana</div>
+                    <div className={isNight ? 'text-slate-100' : 'text-slate-800'}>
+                      {formatCreatedAt(selectedApplication.createdAt) || '-'}
+                    </div>
+                  </div>
                   <div>
                     <div className="text-[11px] font-semibold text-slate-400">F.I.O</div>
                     <div className={isNight ? 'text-slate-100' : 'text-slate-800'}>
@@ -1350,10 +1468,39 @@ function Dashboard() {
 
                 <div className="mt-6 border-t border-slate-200 pt-4 dark:border-slate-700">
                   <div className="mb-2 text-xs font-semibold text-slate-400">Statusni o‘zgartirish</div>
-                  <StatusSelect
-                    value={selectedApplication.statusKey || 'yangi'}
-                    onChange={(next) => handleStatusChange(selectedApplication.id, next)}
-                  />
+                  <StatusSelect value={statusDraft} onChange={handleStatusDraftChange} disabled={statusSaving} />
+                  {statusError ? (
+                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                      {statusError}
+                    </div>
+                  ) : null}
+                  {statusDraft === 'qabul' ? (
+                    <label className="mt-3 block space-y-2">
+                      <span className={`text-xs font-semibold ${isNight ? 'text-slate-300' : 'text-slate-600'}`}>Izoh</span>
+                      <textarea
+                        rows={3}
+                        value={statusNote}
+                        disabled={statusSaving}
+                        onChange={(e) => setStatusNote(e.target.value)}
+                        className={`w-full resize-y rounded-xl border px-4 py-3 text-slate-800 outline-none transition ${
+                          isNight
+                            ? 'border-slate-700 bg-slate-950 text-slate-100 focus:border-emerald-400'
+                            : 'border-slate-200 bg-white focus:border-emerald-500'
+                        }`}
+                        placeholder="Qabul qilish sababi yoki qo‘shimcha ma’lumot"
+                      />
+                      {statusNoteDirty ? (
+                        <button
+                          type="button"
+                          disabled={statusSaving}
+                          onClick={() => void handleStatusSaveWithNote()}
+                          className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {statusSaving ? 'Saqlanmoqda…' : 'Saqlash'}
+                        </button>
+                      ) : null}
+                    </label>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -1387,7 +1534,7 @@ function Dashboard() {
                       isNight ? 'border-slate-600 text-slate-200 hover:bg-slate-800' : 'border-slate-300 text-slate-700 hover:bg-slate-100'
                     }`}
                   >
-                    <FiX className="text-base" aria-hidden="true" />
+                    <X className="text-base" aria-hidden="true" />
                   </button>
                 </div>
 
@@ -1465,28 +1612,49 @@ function Dashboard() {
                     </div>
                   </label>
 
-                  <label className="space-y-2">
-                    <span className={`text-xs font-semibold ${isNight ? 'text-slate-300' : 'text-slate-600'}`}>Maosh (max)</span>
-                    <div className="flex items-center gap-2">
+                  <div className="space-y-2">
+                    <label
+                      className={`inline-flex cursor-pointer items-center gap-2 ${vacancyDialog.mode === 'view' ? 'cursor-default' : ''}`}
+                    >
                       <input
-                        type="text"
-                        inputMode="numeric"
-                        value={vacancyForm.salaryMax}
+                        type="checkbox"
+                        checked={vacancyForm.hasSalaryMax}
                         disabled={vacancyDialog.mode === 'view'}
-                        onChange={onSalaryFieldChange('salaryMax')}
-                        className={`min-w-0 flex-1 rounded-xl border px-4 py-3 text-slate-800 outline-none transition ${
-                          isNight ? 'border-slate-700 bg-slate-950 text-slate-100 focus:border-emerald-400' : 'border-slate-200 bg-white focus:border-emerald-500'
-                        }`}
-                        placeholder="Masalan: 6 000 000"
+                        onChange={(e) =>
+                          setVacancyForm((p) => ({
+                            ...p,
+                            hasSalaryMax: e.target.checked,
+                            salaryMax: e.target.checked ? p.salaryMax : '',
+                          }))
+                        }
+                        className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 disabled:opacity-60"
                       />
-                      <span
-                        className={`shrink-0 text-sm font-semibold ${isNight ? 'text-slate-400' : 'text-slate-500'}`}
-                        aria-hidden="true"
-                      >
-                        UZS
-                      </span>
-                    </div>
-                  </label>
+                      <span className={`text-xs font-semibold ${isNight ? 'text-slate-300' : 'text-slate-600'}`}>Maosh (max)</span>
+                    </label>
+                    {vacancyForm.hasSalaryMax ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={vacancyForm.salaryMax}
+                          disabled={vacancyDialog.mode === 'view'}
+                          onChange={onSalaryFieldChange('salaryMax')}
+                          className={`min-w-0 flex-1 rounded-xl border px-4 py-3 text-slate-800 outline-none transition ${
+                            isNight
+                              ? 'border-slate-700 bg-slate-950 text-slate-100 focus:border-emerald-400'
+                              : 'border-slate-200 bg-white focus:border-emerald-500'
+                          }`}
+                          placeholder="Masalan: 6 000 000"
+                        />
+                        <span
+                          className={`shrink-0 text-sm font-semibold ${isNight ? 'text-slate-400' : 'text-slate-500'}`}
+                          aria-hidden="true"
+                        >
+                          UZS
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
 
                   <label className="space-y-2 md:col-span-2">
                     <span className={`text-xs font-semibold ${isNight ? 'text-slate-300' : 'text-slate-600'}`}>Vakansiya izohi</span>
@@ -1524,10 +1692,14 @@ function Dashboard() {
                         {vacancyForm.rate ? `Stavka: ${vacancyForm.rate}` : ''}
                         {vacancyForm.rate && vacancyForm.workSchedule ? ' • ' : ''}
                         {vacancyForm.workSchedule ? `Ish vaqti: ${vacancyForm.workSchedule}` : ''}
-                        {(vacancyForm.rate || vacancyForm.workSchedule) && (vacancyForm.salaryMin || vacancyForm.salaryMax)
+                        {(vacancyForm.rate || vacancyForm.workSchedule) &&
+                        (vacancyForm.salaryMin || (vacancyForm.hasSalaryMax && vacancyForm.salaryMax))
                           ? ' • '
                           : ''}
-                        {salaryRangeText({ salaryMin: vacancyForm.salaryMin, salaryMax: vacancyForm.salaryMax })}
+                        {salaryRangeText({
+                          salaryMin: vacancyForm.salaryMin,
+                          salaryMax: vacancyForm.hasSalaryMax ? vacancyForm.salaryMax : null,
+                        })}
                       </div>
                       {vacancyForm.description ? (
                         <div className="mt-2 whitespace-pre-wrap text-xs opacity-80">{vacancyForm.description}</div>
@@ -1553,7 +1725,7 @@ function Dashboard() {
                             isNight ? 'border-slate-700 bg-slate-950 text-slate-100 hover:bg-slate-900' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                           }`}
                         >
-                          <FiEdit2 className="mr-2" aria-hidden="true" />
+                          <Pencil className="mr-2" aria-hidden="true" />
                           Tahrirlash
                         </button>
                         <button
@@ -1561,7 +1733,7 @@ function Dashboard() {
                           onClick={() => void deleteVacancy(vacancyDialog.value)}
                           className="inline-flex items-center rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100"
                         >
-                          <FiTrash2 className="mr-2" aria-hidden="true" />
+                          <Trash2 className="mr-2" aria-hidden="true" />
                           O‘chirish
                         </button>
                       </>

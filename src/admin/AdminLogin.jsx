@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { isAdminAuthed, setAdminAuthed } from './RequireAdmin'
 import { authenticateAdminWithPasskey, isPasskeyEnabled, isPasskeySupported } from '../lib/passkey'
-import { MdFingerprint } from 'react-icons/md'
-import { FiLock, FiUser } from 'react-icons/fi'
+import { Fingerprint, Lock, User } from 'lucide-react'
 import urspiLogo from '../assets/urspi.jpg'
 
 function AdminLogin() {
@@ -82,7 +81,7 @@ function AdminLogin() {
                 <span className="text-xs font-semibold text-slate-700">Login</span>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 grid w-10 place-items-center text-slate-500">
-                    <FiUser aria-hidden="true" />
+                    <User aria-hidden="true" />
                   </span>
                   <input
                     value={login}
@@ -98,7 +97,7 @@ function AdminLogin() {
                 <span className="text-xs font-semibold text-slate-700">Parol</span>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 grid w-10 place-items-center text-slate-500">
-                    <FiLock aria-hidden="true" />
+                    <Lock aria-hidden="true" />
                   </span>
                   <input
                     value={password}
@@ -167,7 +166,7 @@ function AdminLogin() {
                   className="h-11 w-full rounded-xl border border-blue-200 bg-white text-sm font-semibold text-[#2463eb] transition hover:bg-blue-50 disabled:opacity-60"
                 >
                   <span className="inline-flex items-center justify-center gap-2">
-                    <MdFingerprint className="text-lg" aria-hidden="true" />
+                    <Fingerprint className="text-lg" aria-hidden="true" />
                     <span>{passkeyLoading ? 'Tekshirilmoqda...' : 'Barmoq izi bilan kirish'}</span>
                   </span>
                 </button>

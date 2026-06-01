@@ -14,8 +14,11 @@ create table if not exists public.applications (
   "langCertFile" text,
   "cvFile" text,
   "statusKey" text not null default 'yangi' check ("statusKey" in ('yangi', 'jarayonda', 'qabul', 'rad')),
+  "statusNote" text,
   "createdAt" timestamptz not null default now()
 );
+
+alter table public.applications add column if not exists "statusNote" text;
 
 alter table public.applications enable row level security;
 
@@ -60,6 +63,9 @@ alter table public.vacancies add column if not exists "workSchedule" text;
 alter table public.vacancies add column if not exists description text;
 alter table public.vacancies add column if not exists requirements text;
 alter table public.vacancies add column if not exists "isActive" boolean not null default true;
+
+alter table public.applications add column if not exists "vacancyId" bigint references public.vacancies(id);
+alter table public.applications add column if not exists "vacancyTitle" text;
 
 alter table public.vacancies enable row level security;
 

@@ -3,8 +3,15 @@ import { copy } from './lang'
 import Navbar from './components/navbar'
 import Footer from './components/footer'
 import { hasSupabaseEnv, supabase } from './lib/supabaseClient'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { isApplicationVacancyColumnError } from './lib/vacancyUtils'
 import regionsUz from './data/regions.uz.json'
+
+function parseVacancyId(value) {
+  if (value == null || value === '') return null
+  const n = Number(value)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
 
 // Format phone number as +998 XX XXX XX XX
 const formatPhoneNumber = (input) => {
@@ -32,7 +39,18 @@ const formatPhoneNumber = (input) => {
 function PublicForm() {
   const location = useLocation()
   const navigate = useNavigate()
-  const vacancyTitle = location?.state?.vacancyTitle
+  const { vacancyId: routeVacancyId } = useParams()
+  const [searchParams] = useSearchParams()
+
+  const vacancyId = useMemo(() => {
+    return (
+      parseVacancyId(routeVacancyId) ??
+      parseVacancyId(searchParams.get('vacancy')) ??
+      parseVacancyId(location?.state?.vacancyId)
+    )
+  }, [routeVacancyId, searchParams, location?.state?.vacancyId])
+
+  const [vacancyTitle, setVacancyTitle] = useState(() => String(location?.state?.vacancyTitle ?? '').trim())
 
   const [currentStep, setCurrentStep] = useState(1)
   const [lang, setLang] = useState('uz')
@@ -83,6 +101,28 @@ function PublicForm() {
     const timer = setTimeout(() => setSubmitError(''), 5000)
     return () => clearTimeout(timer)
   }, [submitError])
+
+  useEffect(() => {
+    const fromState = String(location?.state?.vacancyTitle ?? '').trim()
+    if (fromState) {
+      setVacancyTitle(fromState)
+      return
+    }
+
+    if (!vacancyId || !hasSupabaseEnv || !supabase) return
+
+    let active = true
+    const load = async () => {
+      const { data } = await supabase.from('vacancies').select('title').eq('id', vacancyId).maybeSingle()
+      if (!active || !data?.title) return
+      setVacancyTitle(String(data.title).trim())
+    }
+
+    void load()
+    return () => {
+      active = false
+    }
+  }, [vacancyId, location?.state?.vacancyTitle])
 
   const steps = [
     { id: 1, title: c.step1Title },
@@ -420,10 +460,16 @@ function PublicForm() {
         langCertFile,
         cvFile,
         statusKey: 'yangi',
+        vacancyId: vacancyId != null ? Number(vacancyId) : null,
+        vacancyTitle: vacancyTitle ? String(vacancyTitle).trim() : null,
         createdAt: new Date().toISOString(),
       }
 
-      const { error } = await supabase.from('applications').insert(payload)
+      let { error } = await supabase.from('applications').insert(payload)
+      if (error && isApplicationVacancyColumnError(error)) {
+        const { vacancyId: _id, vacancyTitle: _title, ...withoutVacancy } = payload
+        ;({ error } = await supabase.from('applications').insert(withoutVacancy))
+      }
       if (error) throw error
 
       setSuccessModalOpen(true)
