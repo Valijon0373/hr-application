@@ -9,7 +9,7 @@ const uz = {
   homeSubtitle: 'Ochiq ish o‘rinlarini ko‘rib chiqing va ariza topshiring.',
   vacanciesTitle: 'Ochiq vakansiyalar',
   vacanciesSubtitle: 'O‘zingizga mos vakansiyani tanlang va ariza topshiring.',
-  vacanciesEmpty: "Hozircha vakansiyalar yo'q.",
+  vacanciesEmpty: "Hozircha vakansiyalar yo'q. Vakansiyalar e'lon qilinmagan bo'lsa kuting...",
   details: 'Batafsil',
   descriptionLabel: 'Vakansiya izohi',
   vacancyInfoTitle: 'Vakansiya ma’lumotlari',

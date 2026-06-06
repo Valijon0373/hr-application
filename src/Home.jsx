@@ -63,22 +63,22 @@ function Home() {
           <div className="grid grid-cols-1 md:grid-cols-[360px_1fr]">
             <aside className="relative overflow-hidden bg-gradient-to-b from-[#10b9ff] via-[#075b9d] to-[#062447] p-8 text-white">
               <div className="absolute inset-0 opacity-20 [background:radial-gradient(circle_at_top_left,_#4ee5ff,_transparent_45%),radial-gradient(circle_at_bottom_right,_#32b7ff,_transparent_40%)]" />
-              <div className="relative z-10">
+              {/* <div className="relative z-10"> */}
                 <h1 className="text-3xl font-semibold leading-tight">{c.homeTitle}</h1>
                 <p className="mt-3 text-sm text-white/80">{c.homeSubtitle}</p>
 
-                <div className="mt-10 rounded-2xl border border-white/15 bg-white/10 p-5">
-                  <div className="text-center text-sm font-semibold">{c.quickApplyTitle}</div>
-                  <div className="mt-2 text-center text-xs text-white/80">{c.quickApplyBody}</div>
-                  <button
+                {/* <div className="mt-10 rounded-2xl border border-white/15 bg-white/10 p-5"> */}
+                  {/* <div className="text-center text-sm font-semibold">{c.quickApplyTitle}</div> */}
+                  {/* <div className="mt-2 text-center text-xs text-white/80">{c.quickApplyBody}</div> */}
+                  {/* <button
                     type="button"
                     onClick={() => navigate('/apply')}
                     className="mt-5 inline-flex w-full items-center justify-center rounded-full bg-gradient-to-r from-[#16cbff] to-[#10c968] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(23,196,171,0.35)] transition hover:brightness-105"
                   >
                     {c.applyNow}
-                  </button>
-                </div>
-              </div>
+                  </button> */}
+                {/* </div> */}
+              {/* </div> */}
             </aside>
 
             <section className="p-6 md:p-10">
