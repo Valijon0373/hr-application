@@ -53,7 +53,9 @@ function AdminLogin() {
     e.preventDefault()
     setError('')
 
-    const ok = login.trim() === 'Admin' && password === 'Admin123!'
+    const adminLogin = import.meta.env.VITE_ADMIN_LOGIN
+    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD
+    const ok = login.trim() === adminLogin && password === adminPassword
     if (!ok) {
       setError("Login yoki parol noto'g'ri.")
       return
